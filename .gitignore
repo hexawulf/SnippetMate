@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+
+# Vite / Vue build output
+dist/
+frontend/dist/
+
+# Environment variables (database credentials, etc.)
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE / Editor
+.vscode/
+.cursor/
+*.swp
+*.swo
+*~
+
+# MySQL dumps (keep credentials out of repo)
+*.sql.gz
+
+# Coverage / testing
+coverage/
+
+# Misc
+.cache/
+tmp/
