@@ -4,8 +4,10 @@ node_modules/
 # Vite / Vue build output
 dist/
 frontend/dist/
+.vite/
+frontend/.vite/
 
-# Environment variables (database credentials, etc.)
+# Environment variables
 .env
 .env.local
 .env.*.local
@@ -14,6 +16,12 @@ frontend/dist/
 logs/
 *.log
 npm-debug.log*
+.npm/
+
+
+# pCloud sync 
+.pcloud/
+*.pcloud
 
 # OS files
 .DS_Store
@@ -22,12 +30,6 @@ Thumbs.db
 # IDE / Editor
 .vscode/
 .cursor/
-*.swp
-*.swo
-*~
-
-# MySQL dumps (keep credentials out of repo)
-*.sql.gz
 
 # Coverage / testing
 coverage/
