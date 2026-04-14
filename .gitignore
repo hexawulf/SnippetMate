@@ -30,6 +30,7 @@ Thumbs.db
 # IDE / Editor
 .vscode/
 .cursor/
+*.code-workspace
 
 # Coverage / testing
 coverage/
