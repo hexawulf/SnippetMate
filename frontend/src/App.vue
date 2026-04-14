@@ -1,13 +1,10 @@
 <script setup>
-
+import NavBar from './components/NavBar.vue'
 </script>
 
 <template>
   <div id="app">
-    <div class="bg-primary text-white p-3">
-      NavBar placeholder
-    </div>
-
+    <NavBar />
 
     <div class="d-flex">
 
