@@ -1,10 +1,15 @@
 <script setup>
+import { ref } from 'vue'
 import NavBar from './components/NavBar.vue'
+import SearchBar from './components/SearchBar.vue'
+
+const searchQuery = ref('')
 </script>
 
 <template>
   <div id="app">
     <NavBar />
+    <SearchBar v-model="searchQuery" />
 
     <div class="d-flex">
 
@@ -17,7 +22,7 @@ import NavBar from './components/NavBar.vue'
 
 
       <main class="flex-grow-1 bg-body p-3" style="min-height: 90vh;">
-        Main content placeholder
+        {{ searchQuery }}
       </main>
     </div>
   </div>
