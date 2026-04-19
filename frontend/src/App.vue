@@ -24,7 +24,7 @@ const snippets = ref([
       <TagSidebar />
 
 
-      <main class="flex-grow-1 bg-body p-3" style="min-height: 90vh;">
+      <main class="flex-grow-1 bg-body p-3" style="min-height: 90vh; min-width: 0;">
         <SnippetList :snippets="snippets" />
       </main>
     </div>
