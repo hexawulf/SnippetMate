@@ -33,7 +33,7 @@ const snippets = ref([
 </template>
 <style>
 /* SnippetMate (tags) design-specific styling (sm-* prefix).
-   Not scoped on purpose because these are shared with both TagSidebar and SnippetCard. */
+   Not scoped - because shared with both TagSidebar and SnippetCard. */
 .sm-tag {
   background: #f0ddd5;
   color: #9e3a15;
