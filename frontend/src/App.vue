@@ -34,6 +34,11 @@ const snippets = ref([
 <style>
 /* SnippetMate (tags) design-specific styling (sm-* prefix).
    Not scoped - because shared with both TagSidebar and SnippetCard. */
+
+   #app {
+  overflow-x: hidden;
+}
+
 .sm-tag {
   background: #f0ddd5;
   color: #9e3a15;
