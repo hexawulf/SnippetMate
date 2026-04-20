@@ -15,7 +15,7 @@ const snippets = ref([
 </script>
 
 <template>
-  <div id="app">
+  <div id="snippetmate-app">
     <NavBar />
     <SearchBar v-model="searchQuery" />
 
@@ -35,7 +35,7 @@ const snippets = ref([
 /* SnippetMate (tags) design-specific styling (sm-* prefix).
    Not scoped - because shared with both TagSidebar and SnippetCard. */
 
-   #app {
+   #snippetmate-app {
   overflow-x: hidden;
 }
 
