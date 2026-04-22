@@ -3,7 +3,6 @@ const express = require('express');
 const cors = require('cors');
 const db = require('./db.js');
 
-
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -13,7 +12,6 @@ app.use(express.json());
 app.get('/api/health', (req, res) => {
   res.json({ ok: true });
 });
-
 
 app.get('/api/snippets', async (req, res) => {
   const [rows] = await db.query(
@@ -43,8 +41,28 @@ app.get('/api/snippets', async (req, res) => {
   res.json(Object.values(snippetMap));
 });
 
+app.post('/api/snippets', async (req, res) => {
+  const { title, content, source_url, tags = [] } = req.body;
 
+  const [result] = await db.query(
+    'INSERT INTO snippets (title, content, source_url) VALUES (?, ?, ?)',
+    [title, content, source_url]
+  );
+  const snippetId = result.insertId;
 
+  for (const name of tags) {
+    const [tagResult] = await db.query(
+      'INSERT INTO tags (name) VALUES (?) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)',
+      [name]
+    );
+    await db.query(
+      'INSERT INTO snippet_tags (snippet_id, tag_id) VALUES (?, ?)',
+      [snippetId, tagResult.insertId]
+    );
+  }
+
+  res.status(201).json({ id: snippetId });
+});
 
 app.listen(PORT, () => {
   console.log(`SnippetMate backend listening on http://localhost:${PORT}`);
