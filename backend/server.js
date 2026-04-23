@@ -64,6 +64,41 @@ app.post('/api/snippets', async (req, res) => {
   res.status(201).json({ id: snippetId });
 });
 
+
+app.delete('/api/snippets/:id', async (req, res) => {
+  await db.query('DELETE FROM snippets WHERE id = ?', [req.params.id]);
+  res.status(204).end();
+});
+
+
+app.put('/api/snippets/:id', async (req, res) => {
+  const { id } = req.params;
+  const { title, content, source_url, tags = [] } = req.body;
+
+  await db.query(
+    'UPDATE snippets SET title = ?, content = ?, source_url = ? WHERE id = ?',
+    [title, content, source_url, id]
+  );
+
+  await db.query('DELETE FROM snippet_tags WHERE snippet_id = ?', [id]);
+
+  for (const name of tags) {
+    const [tagResult] = await db.query(
+      'INSERT INTO tags (name) VALUES (?) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)',
+      [name]
+    );
+    await db.query(
+      'INSERT INTO snippet_tags (snippet_id, tag_id) VALUES (?, ?)',
+      [id, tagResult.insertId]
+    );
+  }
+
+  res.json({ id: Number(id) });
+});
+
+
+
+
 app.listen(PORT, () => {
   console.log(`SnippetMate backend listening on http://localhost:${PORT}`);
 });
