@@ -38,3 +38,7 @@ coverage/
 # Misc
 .cache/
 tmp/
+
+
+# Database dump file
+snippetmate_dump.sql
