@@ -1,4 +1,6 @@
 <script setup>
+import Swal from 'sweetalert2'
+
 const props = defineProps(["snippet"]);
 const emit = defineEmits(["edit", "delete"]);
 
@@ -11,6 +13,19 @@ const borders = [
   "border-info",
 ];
 const borderClass = borders[props.snippet.id % borders.length];
+
+async function confirmDelete() {
+  const result = await Swal.fire({
+    title: 'Delete snippet?',
+    text: 'This cannot be undone.',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Delete',
+    cancelButtonText: 'Cancel',
+    reverseButtons: true
+  })
+  if (result.isConfirmed) emit('delete', props.snippet.id)
+}
 </script>
 
 <template>
@@ -37,12 +52,7 @@ const borderClass = borders[props.snippet.id % borders.length];
         >
           Edit
         </button>
-        <button
-          class="btn btn-sm btn-outline-danger"
-          @click="emit('delete', snippet.id)"
-        >
-          Delete
-        </button>
+        <button class="btn btn-sm btn-outline-danger" @click="confirmDelete">Delete</button>
       </div>
     </div>
     <div class="card-body">

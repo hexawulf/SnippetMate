@@ -42,3 +42,4 @@ tmp/
 
 # Database dump file
 snippetmate_dump.sql
+*.sql

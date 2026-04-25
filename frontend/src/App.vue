@@ -11,14 +11,28 @@ const searchQuery = ref('')
 const modalRef = ref(null)
 const snippets = ref([])
 
-onMounted(async () => {
+async function loadSnippets() {
   snippets.value = await api.getSnippets()
-})
+}
+
+async function handleSave(payload) {
+  const { id, ...data } = payload
+  if (id) await api.updateSnippet(id, data)
+  else await api.createSnippet(data)
+  await loadSnippets()
+}
+
+async function handleDelete(id) {
+  await api.deleteSnippet(id)
+  await loadSnippets()
+}
+
+onMounted(loadSnippets)
 </script>
 
 <template>
   <div id="snippetmate-app">
-    <NavBar />
+    <NavBar @add="modalRef.open()" />
     <SearchBar v-model="searchQuery" />
 
     <div class="d-flex">
@@ -27,12 +41,18 @@ onMounted(async () => {
 
 
       <main class="flex-grow-1 bg-body p-3" style="min-height: 90vh; min-width: 0;">
-        <SnippetList :snippets="snippets" />
+        <SnippetList
+          :snippets="snippets"
+          @edit="modalRef.open($event)"
+          @delete="handleDelete"
+        />
       </main>
     </div>
-    <SnippetFormModal ref="modalRef" />
+    <SnippetFormModal ref="modalRef" @save="handleSave" />
   </div>
 </template>
+
+
 <style>
 /* SnippetMate (tags) design-specific styling (with sm-* prefix).
    Not scoped - because shared with both TagSidebar and SnippetCard. */

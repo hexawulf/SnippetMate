@@ -31,7 +31,8 @@ function open(snippet) {
 }
 
 function save() {
-  emit('save', { ...form.value, id: editId.value })
+  const tags = form.value.tags.split(',').map(t => t.trim()).filter(Boolean)
+  emit('save', { ...form.value, tags, id: editId.value })
   modal.hide()
 }
 
