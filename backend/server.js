@@ -10,6 +10,7 @@ app.use(express.json());
 
 app.use('/api/health', require('./routes/health.js'));
 app.use('/api/snippets', require('./routes/snippets.js'));
+app.use('/api/fetch-title', require('./routes/fetch-title.js'));
 
 app.listen(PORT, () => {
   console.log(`SnippetMate backend listening on http://localhost:${PORT}`);

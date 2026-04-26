@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { Modal } from 'bootstrap'
+import api from '../services/api.js'
 
 const emit = defineEmits(['save'])
 
@@ -9,6 +10,7 @@ let modal = null
 const form = ref({ title: '', content: '', source_url: '', tags: '' })
 const editing = ref(false)
 const editId = ref(null)
+const fetching = ref(false)
 
 onMounted(() => { modal = new Modal(modalEl.value) })
 
@@ -30,9 +32,19 @@ function open(snippet) {
   modal.show()
 }
 
+async function fetchTitle() {
+  if (!form.value.source_url) return
+  fetching.value = true
+  try {
+    const title = await api.fetchTitle(form.value.source_url)
+    if (title) form.value.title = title
+  } finally {
+    fetching.value = false
+  }
+}
+
 function save() {
-  const tags = form.value.tags.split(',').map(t => t.trim()).filter(Boolean)
-  emit('save', { ...form.value, tags, id: editId.value })
+  emit('save', { ...form.value, id: editId.value })
   modal.hide()
 }
 
@@ -61,13 +73,26 @@ defineExpose({ open })
             placeholder="Paste your snippet here..."
             style="font-size: 13px; resize: vertical;"
           ></textarea>
-          <input
-            v-model="form.source_url"
-            type="url"
-            class="form-control mb-2"
-            placeholder="Source URL (optional)"
-            style="font-size: 13px;"
-          />
+          
+          <div class="input-group mb-2">
+            <input
+              v-model="form.source_url"
+              type="url"
+              class="form-control"
+              placeholder="Source URL (optional)"
+              style="font-size: 13px;"
+            />
+            <button
+              class="btn btn-outline-secondary"
+              type="button"
+              :disabled="!form.source_url || fetching"
+              @click="fetchTitle"
+              style="font-size: 13px;"
+            >
+              {{ fetching ? 'Fetching…' : 'Fetch title' }}
+            </button>
+          </div>
+
           <input
             v-model="form.tags"
             class="form-control"
