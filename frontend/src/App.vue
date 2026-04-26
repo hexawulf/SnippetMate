@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import NavBar from './components/NavBar.vue'
 import SearchBar from './components/SearchBar.vue'
 import TagSidebar from './components/TagSidebar.vue'
@@ -11,23 +11,28 @@ const searchQuery = ref('')
 const modalRef = ref(null)
 const snippets = ref([])
 
-async function loadSnippets() {
-  snippets.value = await api.getSnippets()
+async function loadSnippets(q) {
+  snippets.value = await api.getSnippets(q)
 }
 
 async function handleSave(payload) {
   const { id, ...data } = payload
   if (id) await api.updateSnippet(id, data)
   else await api.createSnippet(data)
-  await loadSnippets()
+  await loadSnippets(searchQuery.value)
 }
 
 async function handleDelete(id) {
   await api.deleteSnippet(id)
-  await loadSnippets()
+  await loadSnippets(searchQuery.value)
 }
 
 onMounted(loadSnippets)
+let timer
+watch(searchQuery, q => {
+  clearTimeout(timer)
+  timer = setTimeout(() => loadSnippets(q), 250)
+})
 </script>
 
 <template>

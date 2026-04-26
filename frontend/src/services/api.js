@@ -3,8 +3,8 @@ import axios from 'axios'
 const api = axios.create({ baseURL: 'http://localhost:3000/api' })
 
 export default {
-  getSnippets() {
-    return api.get('/snippets').then(res => res.data)
+  getSnippets(q) {
+    return api.get('/snippets', { params: { q } }).then(res => res.data)
   },
   createSnippet(snippet) {
     return api.post('/snippets', snippet)
@@ -14,5 +14,8 @@ export default {
   },
   deleteSnippet(id) {
     return api.delete(`/snippets/${id}`)
-  }
+  },
+fetchTitle(url) {
+  return api.post('/fetch-title', { url }).then(res => res.data.title)
+},
 }
