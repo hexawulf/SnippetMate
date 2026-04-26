@@ -3,32 +3,40 @@ const db = require('../db.js');
 const router = express.Router();
 
 router.get('/', async (req, res) => {
-  const [rows] = await db.query(
-    `SELECT s.*, t.name AS tag
-     FROM snippets s
-     LEFT JOIN snippet_tags st ON s.id = st.snippet_id
-     LEFT JOIN tags t ON st.tag_id = t.id
-     ORDER BY s.created_at DESC`
-  );
-
-  const snippetMap = {};
-  for (const row of rows) {
-    if (!snippetMap[row.id]) {
-      snippetMap[row.id] = {
-        id: row.id,
-        title: row.title,
-        content: row.content,
-        source_url: row.source_url,
-        created_at: row.created_at,
-        updated_at: row.updated_at,
-        tags: []
-      };
+    const q = req.query.q?.trim();
+    const where = q ? 'WHERE MATCH(s.title, s.content) AGAINST(? IN NATURAL LANGUAGE MODE)' : '';
+    const params = q ? [q] : [];
+  
+    const [rows] = await db.query(
+      `SELECT s.*, t.name AS tag
+       FROM snippets s
+       LEFT JOIN snippet_tags st ON s.id = st.snippet_id
+       LEFT JOIN tags t ON st.tag_id = t.id
+       ${where}
+       ORDER BY s.created_at DESC`,
+      params
+    );
+  
+    const snippetMap = {};
+    for (const row of rows) {
+      if (!snippetMap[row.id]) {
+        snippetMap[row.id] = {
+          id: row.id,
+          title: row.title,
+          content: row.content,
+          source_url: row.source_url,
+          created_at: row.created_at,
+          updated_at: row.updated_at,
+          tags: []
+        };
+      }
+      if (row.tag) snippetMap[row.id].tags.push(row.tag);
     }
-    if (row.tag) snippetMap[row.id].tags.push(row.tag);
-  }
+  
+    res.json(Object.values(snippetMap));
+  });
 
-  res.json(Object.values(snippetMap));
-});
+
 
 router.post('/', async (req, res) => {
   const { title, content, source_url, tags = [] } = req.body;
