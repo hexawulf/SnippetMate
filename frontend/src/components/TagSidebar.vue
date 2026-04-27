@@ -1,4 +1,6 @@
 <script setup>
+defineProps(['tags', 'active', 'snippetCount'])
+defineEmits(['select'])
 </script>
 
 <template>
@@ -6,26 +8,19 @@
          style="width: 240px; font-size: 13px;">
     <p class="text-uppercase small text-muted fw-medium mb-2">Filter by tag</p>
     <div class="d-flex flex-wrap gap-1 mb-3">
-      <span class="badge rounded-pill sm-tag bg-primary text-white">NYT</span>
-      <span class="badge rounded-pill sm-tag bg-primary text-white">WSJ</span>
-      <span class="badge rounded-pill sm-tag bg-primary text-white">Financial Times</span>
-      <span class="badge rounded-pill sm-tag bg-primary text-white">Reddit</span>
-      <span class="badge rounded-pill sm-tag bg-primary text-white">X.com</span>
-      <span class="badge rounded-pill sm-tag">Artificial Intelligence</span>
-      <span class="badge rounded-pill sm-tag">Computer Science</span>
-      <span class="badge rounded-pill sm-tag">Programming</span>
-      <span class="badge rounded-pill sm-tag">Web Development</span>
-      <span class="badge rounded-pill sm-tag">Database</span>
-      <span class="badge rounded-pill sm-tag">Security</span>
-      <span class="badge rounded-pill sm-tag">Networking</span>
-      <span class="badge rounded-pill sm-tag">Operating Systems</span>
-      <span class="badge rounded-pill sm-tag">Hardware</span>
+      <span
+        v-for="tag in tags"
+        :key="tag"
+        class="badge rounded-pill sm-tag"
+        :class="active === tag ? 'bg-primary text-white' : ''"
+        @click="$emit('select', tag)"
+      >{{ tag }}</span>
     </div>
 
     <p class="text-uppercase small text-muted fw-medium mb-2">Stats</p>
     <div class="text-muted small" style="line-height: 1.8;">
-      <div>120 snippets</div>
-      <div>14 tags</div>
+      <div>{{ snippetCount }} snippets</div>
+      <div>{{ tags.length }} tags</div>
     </div>
 
     <div class="border-top mt-3 pt-3">

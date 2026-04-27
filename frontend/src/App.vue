@@ -10,28 +10,44 @@ import api from './services/api.js'
 const searchQuery = ref('')
 const modalRef = ref(null)
 const snippets = ref([])
+const tags = ref([])
+const activeTag = ref('')
 
-async function loadSnippets(q) {
-  snippets.value = await api.getSnippets(q)
+async function loadSnippets() {
+  snippets.value = await api.getSnippets(searchQuery.value, activeTag.value)
+}
+
+async function loadTags() {
+  tags.value = await api.getTags()
+}
+
+function selectTag(name) {
+  activeTag.value = activeTag.value === name ? '' : name
+  loadSnippets()
 }
 
 async function handleSave(payload) {
   const { id, ...data } = payload
   if (id) await api.updateSnippet(id, data)
   else await api.createSnippet(data)
-  await loadSnippets(searchQuery.value)
+  await loadSnippets()
+  await loadTags()
 }
 
 async function handleDelete(id) {
   await api.deleteSnippet(id)
-  await loadSnippets(searchQuery.value)
+  await loadSnippets()
 }
 
-onMounted(loadSnippets)
+onMounted(() => {
+  loadSnippets()
+  loadTags()
+})
+
 let timer
-watch(searchQuery, q => {
+watch(searchQuery, () => {
   clearTimeout(timer)
-  timer = setTimeout(() => loadSnippets(q), 250)
+  timer = setTimeout(loadSnippets, 250)
 })
 </script>
 
@@ -42,7 +58,21 @@ watch(searchQuery, q => {
 
     <div class="d-flex">
 
-      <TagSidebar />
+      
+
+      <TagSidebar
+        :tags="tags"
+        :active="activeTag"
+        :snippet-count="snippets.length"
+        @select="selectTag"
+      />
+
+
+
+
+
+
+
 
 
       <main class="flex-grow-1 bg-body p-3" style="min-height: 90vh; min-width: 0;">
