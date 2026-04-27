@@ -23,10 +23,13 @@ defineEmits(['select'])
       <div>{{ tags.length }} tags</div>
     </div>
 
-    <div class="border-top mt-3 pt-3">
-      <p class="text-uppercase small text-muted fw-medium mb-2">Export</p>
-      <button class="btn btn-outline-primary btn-sm w-100 mb-1" style="font-size: 12px;">Export as JSON</button>
-      <button class="btn btn-outline-secondary btn-sm w-100" style="font-size: 12px;">Export as CSV</button>
+    <div class="border-top mt-3 pt-3 text-center">
+      <a href="https://github.com/hexawulf/SnippetMate"
+         target="_blank"
+         class="text-muted"
+         title="View on GitHub">
+        <i class="bi bi-github fs-4"></i>
+      </a>
     </div>
   </aside>
 </template>
