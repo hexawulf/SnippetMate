@@ -2,39 +2,51 @@ const express = require('express');
 const db = require('../db.js');
 const router = express.Router();
 
+
 router.get('/', async (req, res) => {
-    const q = req.query.q?.trim();
-    const where = q ? 'WHERE MATCH(s.title, s.content) AGAINST(? IN NATURAL LANGUAGE MODE)' : '';
-    const params = q ? [q] : [];
-  
-    const [rows] = await db.query(
-      `SELECT s.*, t.name AS tag
-       FROM snippets s
-       LEFT JOIN snippet_tags st ON s.id = st.snippet_id
-       LEFT JOIN tags t ON st.tag_id = t.id
-       ${where}
-       ORDER BY s.created_at DESC`,
-      params
-    );
-  
-    const snippetMap = {};
-    for (const row of rows) {
-      if (!snippetMap[row.id]) {
-        snippetMap[row.id] = {
-          id: row.id,
-          title: row.title,
-          content: row.content,
-          source_url: row.source_url,
-          created_at: row.created_at,
-          updated_at: row.updated_at,
-          tags: []
-        };
-      }
-      if (row.tag) snippetMap[row.id].tags.push(row.tag);
+  const q = req.query.q?.trim();
+  const tag = req.query.tag?.trim();
+  const conditions = [];
+  const params = [];
+  if (q) {
+    conditions.push('MATCH(s.title, s.content) AGAINST(? IN NATURAL LANGUAGE MODE)');
+    params.push(q);
+  }
+  if (tag) {
+    conditions.push('s.id IN (SELECT st2.snippet_id FROM snippet_tags st2 JOIN tags t2 ON st2.tag_id = t2.id WHERE t2.name = ?)');
+    params.push(tag);
+  }
+  const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
+
+  const [rows] = await db.query(
+    `SELECT s.*, t.name AS tag
+     FROM snippets s
+     LEFT JOIN snippet_tags st ON s.id = st.snippet_id
+     LEFT JOIN tags t ON st.tag_id = t.id
+     ${where}
+     ORDER BY s.created_at DESC`,
+    params
+  );
+
+  const snippetMap = {};
+  for (const row of rows) {
+    if (!snippetMap[row.id]) {
+      snippetMap[row.id] = {
+        id: row.id,
+        title: row.title,
+        content: row.content,
+        source_url: row.source_url,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+        tags: []
+      };
     }
-  
-    res.json(Object.values(snippetMap));
-  });
+    if (row.tag) snippetMap[row.id].tags.push(row.tag);
+  }
+
+  res.json(Object.values(snippetMap));
+});
+
 
 
 
