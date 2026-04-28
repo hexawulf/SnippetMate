@@ -48,8 +48,6 @@ router.get('/', async (req, res) => {
 });
 
 
-
-
 router.post('/', async (req, res) => {
   const { title, content, source_url, tags = [] } = req.body;
 
