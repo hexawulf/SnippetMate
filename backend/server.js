@@ -13,6 +13,10 @@ app.use('/api/snippets', require('./routes/snippets.js'));
 app.use('/api/fetch-title', require('./routes/fetch-title.js'));
 app.use('/api/tags', require('./routes/tags.js'));
 
-app.listen(PORT, () => {
-  console.log(`SnippetMate backend listening on http://localhost:${PORT}`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`SnippetMate backend listening on http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;
