@@ -68,13 +68,6 @@ watch(searchQuery, () => {
       />
 
 
-
-
-
-
-
-
-
       <main class="flex-grow-1 bg-body p-3" style="min-height: 90vh; min-width: 0;">
         <SnippetList
           :snippets="snippets"
@@ -89,8 +82,6 @@ watch(searchQuery, () => {
 
 
 <style>
-/* SnippetMate (tags) design-specific styling (with sm-* prefix).
-   Not scoped - because shared with both TagSidebar and SnippetCard. */
 
    #snippetmate-app {
   overflow-x: hidden;
