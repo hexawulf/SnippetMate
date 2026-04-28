@@ -1,18 +1,18 @@
 <script setup>
 import Swal from 'sweetalert2'
 
-const props = defineProps(["snippet"]);
-const emit = defineEmits(["edit", "delete"]);
+const props = defineProps(['snippet'])
+const emit = defineEmits(['edit', 'delete'])
 
 const borders = [
-  "border-primary",
-  "border-secondary",
-  "border-success",
-  "border-danger",
-  "border-warning",
-  "border-info",
-];
-const borderClass = borders[props.snippet.id % borders.length];
+  'border-primary',
+  'border-secondary',
+  'border-success',
+  'border-danger',
+  'border-warning',
+  'border-info'
+]
+const borderClass = borders[props.snippet.id % borders.length]
 
 async function confirmDelete() {
   const result = await Swal.fire({
@@ -27,7 +27,6 @@ async function confirmDelete() {
   if (result.isConfirmed) emit('delete', props.snippet.id)
 }
 </script>
-
 <template>
   <div class="card mb-3" :class="borderClass" style="border-width: 2px">
     <div

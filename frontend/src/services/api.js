@@ -15,10 +15,10 @@ export default {
   deleteSnippet(id) {
     return api.delete(`/snippets/${id}`)
   },
-fetchTitle(url) {
-  return api.post('/fetch-title', { url }).then(res => res.data.title)
-},
-getTags() {
-  return api.get('/tags').then(res => res.data)
-},
+  fetchTitle(url) {
+    return api.post('/fetch-title', { url }).then(res => res.data.title)
+  },
+  getTags() {
+    return api.get('/tags').then(res => res.data)
+  }
 }
