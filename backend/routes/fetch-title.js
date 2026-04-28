@@ -13,7 +13,7 @@ router.post('/', async (req, res) => {
     const match = html.match(/<title[^>]*>([^<]*)<\/title>/i);
     const title = match ? match[1].replace(/&amp;/g, '&').trim() : '';
     res.json({ title });
-  } catch (err) {
+  } catch {
     res.status(502).json({ error: 'Could not fetch URL' });
   }
 });
