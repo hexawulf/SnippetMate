@@ -4,6 +4,7 @@ const request = require('supertest');
 const app = require('../server.js');
 const db = require('../db.js');
 
+// Distinct tag name. Cleanup at the end then only touches data this test file created.
 const TEST_TAG = 'test-tag-day16';
 
 test('GET /api/health returns ok', async () => {
@@ -38,6 +39,7 @@ test('snippet CRUD lifecycle', async () => {
 });
 
 test('GET /api/snippets filters by tag', async () => {
+  // Create a fresh snippet here so this test doesn't depend on the CRUD test running first.
   const create = await request(app)
     .post('/api/snippets')
     .send({ title: 'tag filter test', content: 'x', source_url: null, tags: [TEST_TAG] });

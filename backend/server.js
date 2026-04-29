@@ -13,6 +13,8 @@ app.use('/api/snippets', require('./routes/snippets.js'));
 app.use('/api/fetch-title', require('./routes/fetch-title.js'));
 app.use('/api/tags', require('./routes/tags.js'));
 
+
+// Start the server only when run directly (node server.js) and not when imported by tests.
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`SnippetMate backend listening on http://localhost:${PORT}`);

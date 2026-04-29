@@ -22,6 +22,7 @@ function open(snippet) {
       title: snippet.title,
       content: snippet.content,
       source_url: snippet.source_url || '',
+      // Tags are an array in the database, but a comma-separated string in the input field, so we join them here.
       tags: (snippet.tags || []).join(', ')
     }
   } else {
@@ -32,6 +33,7 @@ function open(snippet) {
   modal.show()
 }
 
+// Ask the backend to fetch the page title for the given URL. This will then be filled into the title field.
 async function fetchTitle() {
   if (!form.value.source_url) return
   fetching.value = true
@@ -49,6 +51,7 @@ function save() {
   modal.hide()
 }
 
+// Expose open() so the parent can call modalRef.value.open(snippet), and then the modal will be shown.
 defineExpose({ open })
 </script>
 

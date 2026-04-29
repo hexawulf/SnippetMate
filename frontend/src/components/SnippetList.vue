@@ -6,6 +6,7 @@ const emit = defineEmits(['edit', 'delete'])
 
 <template>
   <div class="row gx-3">
+    <!-- The col-12 col-lg-6 class will make the snippets stack on small screens (mobile/tablet portrait). -->
     <div
       v-for="snippet in snippets"
       :key="snippet.id"

@@ -4,6 +4,7 @@ defineEmits(['select'])
 </script>
 
 <template>
+  <!-- The d-none d-md-block class will hide the sidebar on small screens (mobile/tablet portrait). -->
   <aside class="bg-white border-end p-3 flex-shrink-0 d-none d-md-block"
          style="width: 240px; font-size: 13px;">
     <p class="text-uppercase small text-muted fw-medium mb-2">Filter by tag</p>

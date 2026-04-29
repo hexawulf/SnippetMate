@@ -6,6 +6,8 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   const q = req.query.q?.trim();
   const tag = req.query.tag?.trim();
+
+  // Build the WHERE clause based on which filters were sent: both, one, or neither are valid.
   const conditions = [];
   const params = [];
   if (q) {
@@ -18,6 +20,7 @@ router.get('/', async (req, res) => {
   }
   const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
 
+  // LEFT JOIN means a snippet with 3 tags comes back as 3 rows - we collapse them below.
   const [rows] = await db.query(
     `SELECT s.*, t.name AS tag
      FROM snippets s
@@ -28,6 +31,7 @@ router.get('/', async (req, res) => {
     params
   );
 
+  // Group rows by snippet id. Then gather their tags into one array per snippet.
   const snippetMap = {};
   for (const row of rows) {
     if (!snippetMap[row.id]) {
@@ -57,6 +61,7 @@ router.post('/', async (req, res) => {
   );
   const snippetId = result.insertId;
 
+  // Insert each tag, or reuse it if it already exists. Then link it to this snippet.
   for (const name of tags) {
     const [tagResult] = await db.query(
       'INSERT INTO tags (name) VALUES (?) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)',
@@ -80,6 +85,7 @@ router.put('/:id', async (req, res) => {
     [title, content, source_url, id]
   );
 
+  // Wipe and re-link tags - this is simpler than diffing what changed.
   await db.query('DELETE FROM snippet_tags WHERE snippet_id = ?', [id]);
 
   for (const name of tags) {

@@ -12,6 +12,7 @@ const borders = [
   'border-warning',
   'border-info'
 ]
+// Pick a border colour based on the snippet id. The same id always gets the same colour, but different ids get different colours so snippets look varied.
 const borderClass = borders[props.snippet.id % borders.length]
 
 async function confirmDelete() {

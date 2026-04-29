@@ -21,6 +21,7 @@ async function loadTags() {
   tags.value = await api.getTags()
 }
 
+// Click the same tag again. This will clear the filter.
 function selectTag(name) {
   activeTag.value = activeTag.value === name ? '' : name
   loadSnippets()
@@ -30,6 +31,7 @@ async function handleSave(payload) {
   const { id, ...data } = payload
   if (id) await api.updateSnippet(id, data)
   else await api.createSnippet(data)
+  // Reload tags too. This is to handle the case where the user added a brand-new tag.
   await loadSnippets()
   await loadTags()
 }
@@ -44,6 +46,7 @@ onMounted(() => {
   loadTags()
 })
 
+// Debounce search input. This is to prevent the API from being hit on every keystroke.
 let timer
 watch(searchQuery, () => {
   clearTimeout(timer)
