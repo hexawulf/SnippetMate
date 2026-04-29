@@ -1,7 +1,7 @@
 -- SnippetMate schema.sql (MySQL 8.4)
--- Run this against the  existing snippetmate database:
+-- Run this against the existing snippetmate database:
 --   mysql -u snippetmate_user -p snippetmate < db/schema.sql
--- Password for snippetmate database is in the README.md file
+-- The password is the one you set for snippetmate_user when you created the database (see README.md).
 
 SET NAMES utf8mb4;
 
