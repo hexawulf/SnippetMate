@@ -1,6 +1,6 @@
 # <img src="frontend/public/favicon.svg" alt="SnippetMate icon" width="32"> SnippetMate
 
-**Paste it. Tag it. And then Find it.**
+**Paste it. Tag it. Find it.**
 
 SnippetMate is a single-page web application (SPA) for capturing short text or code snippets from the web, including AI prompts and AI responses. You can tag your snippets, then search by title, tag, or even by full-text.
 
