@@ -1,3 +1,4 @@
+'use strict';
 const express = require('express');
 const db = require('../db.js');
 const router = express.Router();
@@ -7,9 +8,9 @@ router.get('/', async (req, res) => {
   const q = req.query.q?.trim();
   const tag = req.query.tag?.trim();
 
-  // Build the WHERE clause based on which filters were sent: both, one, or neither are valid.
-  const conditions = [];
-  const params = [];
+  const conditions = ['s.user_id = ?'];
+  const params = [req.userId];
+
   if (q) {
     conditions.push('MATCH(s.title, s.content) AGAINST(? IN NATURAL LANGUAGE MODE)');
     params.push(q);
@@ -18,9 +19,8 @@ router.get('/', async (req, res) => {
     conditions.push('s.id IN (SELECT st2.snippet_id FROM snippet_tags st2 JOIN tags t2 ON st2.tag_id = t2.id WHERE t2.name = ?)');
     params.push(tag);
   }
-  const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
+  const where = 'WHERE ' + conditions.join(' AND ');
 
-  // LEFT JOIN means a snippet with 3 tags comes back as 3 rows - we collapse them below.
   const [rows] = await db.query(
     `SELECT s.*, t.name AS tag
      FROM snippets s
@@ -31,7 +31,6 @@ router.get('/', async (req, res) => {
     params
   );
 
-  // Group rows by snippet id. Then gather their tags into one array per snippet.
   const snippetMap = {};
   for (const row of rows) {
     if (!snippetMap[row.id]) {
@@ -56,12 +55,11 @@ router.post('/', async (req, res) => {
   const { title, content, source_url, tags = [] } = req.body;
 
   const [result] = await db.query(
-    'INSERT INTO snippets (title, content, source_url) VALUES (?, ?, ?)',
-    [title, content, source_url]
+    'INSERT INTO snippets (title, content, source_url, user_id) VALUES (?, ?, ?, ?)',
+    [title, content, source_url, req.userId]
   );
   const snippetId = result.insertId;
 
-  // Insert each tag, or reuse it if it already exists. Then link it to this snippet.
   for (const name of tags) {
     const [tagResult] = await db.query(
       'INSERT INTO tags (name) VALUES (?) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)',
@@ -80,30 +78,59 @@ router.put('/:id', async (req, res) => {
   const { id } = req.params;
   const { title, content, source_url, tags = [] } = req.body;
 
-  await db.query(
-    'UPDATE snippets SET title = ?, content = ?, source_url = ? WHERE id = ?',
-    [title, content, source_url, id]
-  );
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
 
-  // Wipe and re-link tags - this is simpler than diffing what changed.
-  await db.query('DELETE FROM snippet_tags WHERE snippet_id = ?', [id]);
+    // Confirm ownership before any writes. affectedRows is unreliable here:
+    // mysql2 returns 0 when the UPDATE matches the row but changes no values,
+    // which would give a legitimate owner a false 404 on a no-op save.
+    const [[owned]] = await conn.query(
+      'SELECT id FROM snippets WHERE id = ? AND user_id = ?',
+      [id, req.userId]
+    );
+    if (!owned) {
+      await conn.rollback();
+      return res.status(404).json({ error: 'Not found' });
+    }
 
-  for (const name of tags) {
-    const [tagResult] = await db.query(
-      'INSERT INTO tags (name) VALUES (?) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)',
-      [name]
+    await conn.query(
+      'UPDATE snippets SET title = ?, content = ?, source_url = ? WHERE id = ? AND user_id = ?',
+      [title, content, source_url, owned.id, req.userId]
     );
-    await db.query(
-      'INSERT INTO snippet_tags (snippet_id, tag_id) VALUES (?, ?)',
-      [id, tagResult.insertId]
+
+    // Scope the DELETE through the snippets join so this write self-enforces ownership.
+    await conn.query(
+      `DELETE st FROM snippet_tags st
+       JOIN snippets s ON s.id = st.snippet_id
+       WHERE st.snippet_id = ? AND s.user_id = ?`,
+      [owned.id, req.userId]
     );
+
+    for (const name of tags) {
+      const [tagResult] = await conn.query(
+        'INSERT INTO tags (name) VALUES (?) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)',
+        [name]
+      );
+      await conn.query(
+        'INSERT INTO snippet_tags (snippet_id, tag_id) VALUES (?, ?)',
+        [owned.id, tagResult.insertId]
+      );
+    }
+
+    await conn.commit();
+    res.json({ id: owned.id });
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
   }
-
-  res.json({ id: Number(id) });
 });
 
 router.delete('/:id', async (req, res) => {
-  await db.query('DELETE FROM snippets WHERE id = ?', [req.params.id]);
+  const [del] = await db.query('DELETE FROM snippets WHERE id = ? AND user_id = ?', [req.params.id, req.userId]);
+  if (del.affectedRows === 0) return res.status(404).json({ error: 'Not found' });
   res.status(204).end();
 });
 
