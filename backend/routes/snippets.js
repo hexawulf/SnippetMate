@@ -78,13 +78,19 @@ router.put('/:id', async (req, res) => {
   const { id } = req.params;
   const { title, content, source_url, tags = [] } = req.body;
 
-  const [upd] = await db.query(
+  // Confirm ownership before any writes. affectedRows is unreliable here:
+  // mysql2 returns 0 when the UPDATE matches the row but changes no values,
+  // which would give a legitimate owner a false 404 on a no-op save.
+  const [[owned]] = await db.query(
+    'SELECT id FROM snippets WHERE id = ? AND user_id = ?',
+    [id, req.userId]
+  );
+  if (!owned) return res.status(404).json({ error: 'Not found' });
+
+  await db.query(
     'UPDATE snippets SET title = ?, content = ?, source_url = ? WHERE id = ? AND user_id = ?',
     [title, content, source_url, id, req.userId]
   );
-  // Guard: only touch snippet_tags if this user actually owns the snippet.
-  // Without this check, the wipe below would destroy another user's tags.
-  if (upd.affectedRows === 0) return res.status(404).json({ error: 'Not found' });
 
   await db.query('DELETE FROM snippet_tags WHERE snippet_id = ?', [id]);
 

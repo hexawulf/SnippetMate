@@ -6,15 +6,12 @@ on top of the original single-user app. Markdown export already shipped in V2.
 
 Repo: github.com/hexawulf/SnippetMate
 
-## Where this runs (ground truth — trust this over any other host list)
+## Where this runs
 
-- This project lives and runs on **piapps** (Raspberry Pi 5, Ubuntu, the nginx app host).
-  Working copy: /home/zk/projects/SnippetMate
-- It does NOT run on piapps2 — that box is the OpenClaw/Docker host. Ignore any note that says
-  "new services live on piapps2"; SnippetMate is an nginx-served app on piapps.
-- MySQL 8.4 runs locally on piapps. Database `snippetmate`, user `snippetmate_user@localhost`.
-  The CLI does not read backend/.env; connect with `mysql -u snippetmate_user -p snippetmate`.
-- Never invent or assume a hostname. If you need to know where you are, run `hostname`.
+- Runs as an nginx-fronted Node + MySQL app on a single Linux host; MySQL runs locally.
+- Never assume a hostname — run `hostname` if it matters.
+- Database `snippetmate`. The CLI does not read backend/.env; connect with
+  `mysql -u <DB_USER> -p snippetmate` using the credentials in backend/.env.
 
 ## Stack
 
@@ -54,9 +51,9 @@ Backend:
 
 - Backend reads backend/.env (DB_* + GOOGLE_APPLICATION_CREDENTIALS). Frontend reads
   frontend/.env.local (VITE_FIREBASE_*). Both are gitignored.
-- The Firebase Admin SDK loads its key via GOOGLE_APPLICATION_CREDENTIALS, which points at a JSON
-  file OUTSIDE the repo (/home/zk/secrets/snippetmate/). Never move the key into the repo, never
-  print it, never commit any .env or key file.
+- The Firebase Admin SDK loads its key from the path in GOOGLE_APPLICATION_CREDENTIALS; that file
+  lives outside the repo and is never committed. Never move the key into the repo, never print it,
+  never commit any .env or key file.
 
 ## Code style
 
@@ -74,7 +71,7 @@ Backend:
 - Backend: cd backend && npm install && npm start  -> http://localhost:3000
 - Frontend: cd frontend && npm install && npm run dev  -> http://localhost:5173
 - Tests: cd backend && npm test  (node:test + supertest; integration tests hit the real DB).
-- Load DB: mysql -u snippetmate_user -p snippetmate < db/schema.sql  then  < db/seed.sql
+- Load DB: mysql -u <DB_USER> -p snippetmate < db/schema.sql  then  < db/seed.sql
 
 ## Non-negotiables
 
