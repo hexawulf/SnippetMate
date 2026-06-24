@@ -43,3 +43,8 @@ tmp/
 # Database dump file
 snippetmate_dump.sql
 *.sql
+
+# Firebase service-account key (the real file lives OUTSIDE the repo; this is belt-and-suspenders)
+*firebase-adminsdk*.json
+*service-account*.json
+serviceAccount*.json
