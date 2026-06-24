@@ -12,9 +12,13 @@ export function snippetToMarkdown(snippet) {
     md += `Tags: ${snippet.tags.map(t => '#' + t).join(' ')}\n\n`
   }
 
-  md += '```\n'
-  md += `${snippet.content}\n`
-  md += '```\n\n'
+  const content = snippet.content ?? ''
+  // Choose a fence longer than the longest backtick run in the content.
+  const longestRun = (content.match(/`+/g) || []).reduce((max, run) => Math.max(max, run.length), 0)
+  const fence = '`'.repeat(Math.max(3, longestRun + 1))
+  md += `${fence}\n`
+  md += `${content}\n`
+  md += `${fence}\n\n`
 
   md += '_Exported from SnippetMate_\n'
 
