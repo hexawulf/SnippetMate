@@ -5,15 +5,28 @@
 
 SET NAMES utf8mb4;
 
+CREATE TABLE IF NOT EXISTS users (
+  id INT NOT NULL AUTO_INCREMENT,
+  firebase_uid VARCHAR(128) NOT NULL,
+  email VARCHAR(255) DEFAULT NULL,
+  display_name VARCHAR(255) DEFAULT NULL,
+  created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_firebase_uid (firebase_uid)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS snippets (
   id INT NOT NULL AUTO_INCREMENT,
+  user_id INT NOT NULL,
   title VARCHAR(500) DEFAULT NULL,
   content TEXT NOT NULL,
   source_url VARCHAR(2083) DEFAULT NULL,
   created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
-  FULLTEXT KEY ft_title_content (title, content)
+  KEY idx_user_id (user_id),
+  FULLTEXT KEY ft_title_content (title, content),
+  CONSTRAINT fk_snippets_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS tags (
