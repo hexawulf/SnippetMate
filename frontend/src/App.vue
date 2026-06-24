@@ -6,6 +6,7 @@ import TagSidebar from './components/TagSidebar.vue'
 import SnippetList from './components/SnippetList.vue'
 import SnippetFormModal from './components/SnippetFormModal.vue'
 import api from './services/api.js'
+import { snippetToMarkdown, downloadFile } from './utils/markdown.js'
 
 const searchQuery = ref('')
 const modalRef = ref(null)
@@ -41,6 +42,12 @@ async function handleDelete(id) {
   await loadSnippets()
 }
 
+function handleExportAll() {
+  if (snippets.value.length === 0) return
+  const mdContent = snippets.value.map(snippetToMarkdown).join('\n---\n\n')
+  downloadFile(mdContent, 'snippets-export.md')
+}
+
 onMounted(() => {
   loadSnippets()
   loadTags()
@@ -56,7 +63,7 @@ watch(searchQuery, () => {
 
 <template>
   <div id="snippetmate-app">
-    <NavBar @add="modalRef.open()" />
+    <NavBar @add="modalRef.open()" @export-all="handleExportAll" />
     <SearchBar v-model="searchQuery" />
 
     <div class="d-flex">

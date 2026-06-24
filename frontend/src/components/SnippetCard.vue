@@ -1,5 +1,6 @@
 <script setup>
 import Swal from 'sweetalert2'
+import { snippetToMarkdown, generateFilename, downloadFile } from '../utils/markdown.js'
 
 const props = defineProps(['snippet'])
 const emit = defineEmits(['edit', 'delete'])
@@ -27,6 +28,12 @@ async function confirmDelete() {
   })
   if (result.isConfirmed) emit('delete', props.snippet.id)
 }
+
+function downloadMd() {
+  const md = snippetToMarkdown(props.snippet)
+  const filename = generateFilename(props.snippet)
+  downloadFile(md, filename)
+}
 </script>
 <template>
   <div class="card mb-3" :class="borderClass" style="border-width: 2px">
@@ -46,6 +53,12 @@ async function confirmDelete() {
         </a>
       </div>
       <div class="d-flex gap-1 flex-shrink-0">
+        <button
+          class="btn btn-sm btn-outline-primary"
+          @click="downloadMd"
+        >
+          MD
+        </button>
         <button
           class="btn btn-sm btn-outline-secondary"
           @click="emit('edit', snippet)"
