@@ -5,7 +5,7 @@ const api = axios.create({ baseURL: '/api' })
 
 api.interceptors.request.use(async (config) => {
   const u = auth.currentUser
-  if (u) config.headers.Authorization = `Bearer ${await u.getIdToken()}`
+  if (u) config.headers.set('Authorization', `Bearer ${await u.getIdToken()}`)
   return config
 })
 

@@ -33,7 +33,8 @@ async function auth(req, res, next) {
     const decoded = await admin.auth().verifyIdToken(token);
     req.userId = await upsertUser(decoded.uid, decoded.email, decoded.name);
     next();
-  } catch {
+  } catch (err) {
+    console.error('[auth] verifyIdToken/upsert failed:', err?.code, err?.message, err?.stack);
     res.status(401).json({ error: 'Unauthorized' });
   }
 }

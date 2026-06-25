@@ -1,8 +1,10 @@
 'use strict';
-const admin = require('firebase-admin');
+const { initializeApp, getApps } = require('firebase-admin/app');
+const { getAuth } = require('firebase-admin/auth');
 
-if (!admin.apps.length) {
-  admin.initializeApp();
+if (!getApps().length) {
+  initializeApp();
 }
 
-module.exports = admin;
+// Export an object with auth() to match the call site in auth.js middleware.
+module.exports = { auth: () => getAuth() };
