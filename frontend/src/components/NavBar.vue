@@ -35,7 +35,7 @@ function handleAboutModalClosed() {
         aria-label="About SnippetMate"
         @click="openAboutModal"
       >
-        <i class="bi bi-info-circle"></i>
+        <i class="bi bi-info" style="font-size: 20px; line-height: 1;"></i>
       </button>
     </div>
 
