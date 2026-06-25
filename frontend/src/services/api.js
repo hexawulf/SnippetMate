@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { auth } from './firebase.js'
 
-const api = axios.create({ baseURL: 'http://localhost:3000/api' })
+const api = axios.create({ baseURL: '/api' })
 
 api.interceptors.request.use(async (config) => {
   const u = auth.currentUser

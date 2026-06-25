@@ -17,17 +17,29 @@ const snippets = ref([])
 const tags = ref([])
 const activeTag = ref('')
 
+// Incremented on logout to discard any in-flight requests from the previous session.
+let loadEpoch = 0
+
 async function loadSnippets() {
-  snippets.value = await api.getSnippets(searchQuery.value, activeTag.value)
+  if (!user.value) return
+  const epoch = loadEpoch
+  const data = await api.getSnippets(searchQuery.value, activeTag.value)
+  if (epoch === loadEpoch) snippets.value = data
 }
 
 async function loadTags() {
-  tags.value = await api.getTags()
+  if (!user.value) return
+  const epoch = loadEpoch
+  const data = await api.getTags()
+  if (epoch === loadEpoch) tags.value = data
 }
 
-function clearSnippetsAndTags() {
+function clearAll() {
+  loadEpoch++
   snippets.value = []
   tags.value = []
+  searchQuery.value = ''
+  activeTag.value = ''
 }
 
 function selectTag(name) {
@@ -59,7 +71,7 @@ watch(user, (u) => {
     loadSnippets()
     loadTags()
   } else {
-    clearSnippetsAndTags()
+    clearAll()
   }
 }, { immediate: true })
 

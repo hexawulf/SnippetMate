@@ -21,7 +21,7 @@ const emit = defineEmits(['add', 'export-all', 'logout'])
           class="sm-avatar rounded-circle"
           referrerpolicy="no-referrer"
         />
-        <span v-else class="text-white small">{{ user.displayName || user.email }}</span>
+        <span class="text-white small">{{ user.displayName || user.email }}</span>
         <button class="btn btn-outline-light btn-sm" @click="emit('logout')">Sign out</button>
       </template>
     </div>
