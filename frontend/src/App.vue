@@ -1,12 +1,15 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, watch } from 'vue'
 import NavBar from './components/NavBar.vue'
 import SearchBar from './components/SearchBar.vue'
 import TagSidebar from './components/TagSidebar.vue'
 import SnippetList from './components/SnippetList.vue'
 import SnippetFormModal from './components/SnippetFormModal.vue'
 import api from './services/api.js'
+import { useAuth } from './composables/useAuth.js'
 import { snippetToMarkdown, downloadFile } from './utils/markdown.js'
+
+const { user, authLoading, signIn, logout } = useAuth()
 
 const searchQuery = ref('')
 const modalRef = ref(null)
@@ -14,15 +17,31 @@ const snippets = ref([])
 const tags = ref([])
 const activeTag = ref('')
 
+// Incremented on logout to discard any in-flight requests from the previous session.
+let loadEpoch = 0
+
 async function loadSnippets() {
-  snippets.value = await api.getSnippets(searchQuery.value, activeTag.value)
+  if (!user.value) return
+  const epoch = loadEpoch
+  const data = await api.getSnippets(searchQuery.value, activeTag.value)
+  if (epoch === loadEpoch) snippets.value = data
 }
 
 async function loadTags() {
-  tags.value = await api.getTags()
+  if (!user.value) return
+  const epoch = loadEpoch
+  const data = await api.getTags()
+  if (epoch === loadEpoch) tags.value = data
 }
 
-// Click the same tag again. This will clear the filter.
+function clearAll() {
+  loadEpoch++
+  snippets.value = []
+  tags.value = []
+  searchQuery.value = ''
+  activeTag.value = ''
+}
+
 function selectTag(name) {
   activeTag.value = activeTag.value === name ? '' : name
   loadSnippets()
@@ -32,7 +51,6 @@ async function handleSave(payload) {
   const { id, ...data } = payload
   if (id) await api.updateSnippet(id, data)
   else await api.createSnippet(data)
-  // Reload tags too. This is to handle the case where the user added a brand-new tag.
   await loadSnippets()
   await loadTags()
 }
@@ -48,12 +66,16 @@ function handleExportAll() {
   downloadFile(mdContent, 'snippets-export.md')
 }
 
-onMounted(() => {
-  loadSnippets()
-  loadTags()
-})
+watch(user, (u) => {
+  if (u) {
+    loadSnippets()
+    loadTags()
+  } else {
+    clearAll()
+  }
+}, { immediate: true })
 
-// Debounce search input. This is to prevent the API from being hit on every keystroke.
+// Debounce search input.
 let timer
 watch(searchQuery, () => {
   clearTimeout(timer)
@@ -62,22 +84,36 @@ watch(searchQuery, () => {
 </script>
 
 <template>
-  <div id="snippetmate-app">
-    <NavBar @add="modalRef.open()" @export-all="handleExportAll" />
+  <!-- Auth loading: block render until Firebase resolves state to prevent flicker. -->
+  <div v-if="authLoading" class="sm-loading-screen">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading…</span>
+    </div>
+  </div>
+
+  <div v-else-if="!user" class="sm-signin-screen">
+    <div class="sm-signin-card card shadow-sm p-4">
+      <h1 class="sm-signin-title fw-bold mb-1">
+        <i class="bi bi-code-square me-2 text-primary"></i>SnippetMate
+      </h1>
+      <p class="text-muted mb-4">Capture, tag, and search your snippets.</p>
+      <button class="btn btn-primary w-100" @click="signIn">
+        <i class="bi bi-google me-2"></i>Sign in with Google
+      </button>
+    </div>
+  </div>
+
+  <div v-else id="snippetmate-app">
+    <NavBar :user="user" @add="modalRef.open()" @export-all="handleExportAll" @logout="logout" />
     <SearchBar v-model="searchQuery" />
 
     <div class="d-flex">
-
-      
-
       <TagSidebar
         :tags="tags"
         :active="activeTag"
         :snippet-count="snippets.length"
         @select="selectTag"
       />
-
-
       <main class="flex-grow-1 bg-body p-3" style="min-height: 90vh; min-width: 0;">
         <SnippetList
           :snippets="snippets"
@@ -90,10 +126,8 @@ watch(searchQuery, () => {
   </div>
 </template>
 
-
 <style>
-
-   #snippetmate-app {
+#snippetmate-app {
   overflow-x: hidden;
 }
 
@@ -106,5 +140,22 @@ watch(searchQuery, () => {
   border: none;
 }
 .sm-tag:hover { background: #e8cfc3; color: #7a2e10; }
-</style>
 
+.sm-loading-screen,
+.sm-signin-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sm-signin-card {
+  width: 100%;
+  max-width: 360px;
+  text-align: center;
+}
+
+.sm-signin-title {
+  font-size: 1.6rem;
+}
+</style>
