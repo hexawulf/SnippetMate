@@ -25,6 +25,12 @@ export default {
   fetchTitle(url) {
     return api.post('/fetch-title', { url }).then(res => res.data.title)
   },
+  exportSnippetsJson() {
+    return api.get('/snippets/export').then(res => res.data)
+  },
+  importSnippets(body) {
+    return api.post('/snippets/import', body).then(res => res.data)
+  },
   getTags() {
     return api.get('/tags').then(res => res.data)
   }

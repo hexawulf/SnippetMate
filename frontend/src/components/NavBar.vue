@@ -1,14 +1,17 @@
 <script setup>
 import { ref, nextTick } from 'vue'
+import Swal from 'sweetalert2'
+import api from '../services/api.js'
 import AboutModal from './AboutModal.vue'
 
 defineProps({
   user: { type: Object, default: null },
 })
-const emit = defineEmits(['add', 'export-all', 'logout'])
+const emit = defineEmits(['add', 'export-all', 'export-json', 'imported', 'logout'])
 
 const aboutModalRef = ref(null)
 const infoBtnRef = ref(null)
+const fileInputRef = ref(null)
 
 function openAboutModal() {
   aboutModalRef.value?.open()
@@ -19,6 +22,34 @@ function handleAboutModalClosed() {
   nextTick(() => {
     infoBtnRef.value?.focus()
   })
+}
+
+async function handleFileSelect(event) {
+  const file = event.target.files[0]
+  if (!file) return
+
+  try {
+    const text = await file.text()
+    const parsed = JSON.parse(text)
+    
+    const result = await api.importSnippets(parsed)
+    let msg = `Imported ${result.imported}, skipped ${result.skipped}`
+    if (result.errors && result.errors.length) {
+      msg += `\n(${result.errors.length} errors encountered)`
+    }
+    
+    await Swal.fire({
+      title: 'Import Complete',
+      text: msg,
+      icon: result.errors?.length ? 'warning' : 'success'
+    })
+    
+    emit('imported')
+  } catch (err) {
+    Swal.fire('Error', 'Invalid JSON file', 'error')
+  } finally {
+    if (fileInputRef.value) fileInputRef.value.value = ''
+  }
 }
 </script>
 
@@ -40,7 +71,10 @@ function handleAboutModalClosed() {
     </div>
 
     <div class="d-flex align-items-center gap-2 ms-auto">
+      <input type="file" accept="application/json" class="d-none" ref="fileInputRef" id="importFileInput" @change="handleFileSelect" />
+      <label for="importFileInput" class="btn btn-light btn-sm mb-0">Import</label>
       <button class="btn btn-light btn-sm" @click="emit('export-all')">Export all</button>
+      <button class="btn btn-light btn-sm" @click="emit('export-json')">Export JSON</button>
       <button class="btn btn-light btn-sm" @click="emit('add')">+ New snippet</button>
       <template v-if="user">
         <img

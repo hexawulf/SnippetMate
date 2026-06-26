@@ -18,7 +18,12 @@ async function auth(req, res, next) {
   // Test-mode shim: activated by IS_TEST, which is frozen at process start.
   // Cannot be triggered by any request header or input.
   if (IS_TEST) {
-    req.userId = await upsertUser('seed-demo', 'demo@snippetmate.local', 'Seed Demo');
+    const authHeader = req.headers.authorization;
+    if (authHeader === 'Bearer none') {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const uid = authHeader === 'Bearer user2' ? 'seed-demo-2' : 'seed-demo';
+    req.userId = await upsertUser(uid, uid + '@snippetmate.local', uid === 'seed-demo' ? 'Seed Demo' : 'Seed Demo 2');
     return next();
   }
 

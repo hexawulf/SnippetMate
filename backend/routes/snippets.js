@@ -134,4 +134,115 @@ router.delete('/:id', async (req, res) => {
   res.status(204).end();
 });
 
+router.get('/export', async (req, res) => {
+  const [rows] = await db.query(
+    `SELECT s.*, t.name AS tag
+     FROM snippets s
+     LEFT JOIN snippet_tags st ON s.id = st.snippet_id
+     LEFT JOIN tags t ON st.tag_id = t.id
+     WHERE s.user_id = ?
+     ORDER BY s.created_at DESC`,
+    [req.userId]
+  );
+
+  const snippetMap = {};
+  for (const row of rows) {
+    if (!snippetMap[row.id]) {
+      snippetMap[row.id] = {
+        title: row.title,
+        content: row.content,
+        source_url: row.source_url,
+        tags: [],
+        created_at: row.created_at
+      };
+    }
+    if (row.tag) snippetMap[row.id].tags.push(row.tag);
+  }
+
+  const exportData = {
+    format: 'snippetmate-export',
+    version: 1,
+    exported_at: new Date().toISOString(),
+    snippets: Object.values(snippetMap)
+  };
+
+  res.setHeader('Content-Disposition', 'attachment; filename="snippetmate-export.json"');
+  res.json(exportData);
+});
+
+router.post('/import', async (req, res) => {
+  const { format, version, snippets } = req.body;
+
+  if (format !== 'snippetmate-export' || version !== 1) {
+    return res.status(400).json({ error: 'Invalid format or version' });
+  }
+
+  if (!Array.isArray(snippets)) {
+    return res.status(400).json({ error: 'Snippets must be an array' });
+  }
+
+  if (snippets.length > 1000) {
+    return res.status(400).json({ error: 'Import capped at 1000 snippets' });
+  }
+
+  let imported = 0;
+  let skipped = 0;
+  const errors = [];
+
+  const conn = await db.getConnection();
+  try {
+    for (let i = 0; i < snippets.length; i++) {
+      const snippet = snippets[i];
+      const { title, content, source_url, tags = [] } = snippet;
+
+      if (!title || !content) {
+        errors.push({ index: i, title, error: 'Missing required fields: title and content' });
+        continue;
+      }
+
+      try {
+        await conn.beginTransaction();
+
+        const [[existing]] = await conn.query(
+          'SELECT id FROM snippets WHERE user_id = ? AND content = ? AND source_url <=> ? LIMIT 1',
+          [req.userId, content, source_url || null]
+        );
+
+        if (existing) {
+          await conn.rollback();
+          skipped++;
+          continue;
+        }
+
+        const [result] = await conn.query(
+          'INSERT INTO snippets (title, content, source_url, user_id) VALUES (?, ?, ?, ?)',
+          [title, content, source_url || null, req.userId]
+        );
+        const snippetId = result.insertId;
+
+        for (const name of tags) {
+          const [tagResult] = await conn.query(
+            'INSERT INTO tags (name) VALUES (?) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)',
+            [name]
+          );
+          await conn.query(
+            'INSERT INTO snippet_tags (snippet_id, tag_id) VALUES (?, ?)',
+            [snippetId, tagResult.insertId]
+          );
+        }
+
+        await conn.commit();
+        imported++;
+      } catch (err) {
+        await conn.rollback();
+        errors.push({ index: i, title, error: err.message });
+      }
+    }
+  } finally {
+    conn.release();
+  }
+
+  res.json({ imported, skipped, errors });
+});
+
 module.exports = router;

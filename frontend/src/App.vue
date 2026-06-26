@@ -66,6 +66,20 @@ function handleExportAll() {
   downloadFile(mdContent, 'snippets-export.md')
 }
 
+async function handleExportJson() {
+  try {
+    const data = await api.exportSnippetsJson()
+    downloadFile(JSON.stringify(data, null, 2), 'snippetmate-export.json')
+  } catch (err) {
+    console.error('Export JSON failed:', err)
+  }
+}
+
+async function handleImported() {
+  await loadSnippets()
+  await loadTags()
+}
+
 watch(user, (u) => {
   if (u) {
     loadSnippets()
@@ -104,7 +118,7 @@ watch(searchQuery, () => {
   </div>
 
   <div v-else id="snippetmate-app">
-    <NavBar :user="user" @add="modalRef.open()" @export-all="handleExportAll" @logout="logout" />
+    <NavBar :user="user" @add="modalRef.open()" @export-all="handleExportAll" @export-json="handleExportJson" @imported="handleImported" @logout="logout" />
     <SearchBar v-model="searchQuery" />
 
     <div class="d-flex">
