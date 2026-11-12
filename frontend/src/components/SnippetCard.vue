@@ -1,6 +1,7 @@
 <script setup>
 import Swal from 'sweetalert2'
 import { snippetToMarkdown, generateFilename, downloadFile } from '../utils/markdown.js'
+import { isHttpUrl } from '../utils/safety.js'
 
 const props = defineProps(['snippet'])
 const emit = defineEmits(['edit', 'delete'])
@@ -42,15 +43,24 @@ function downloadMd() {
     >
       <div class="overflow-hidden">
         <h6 class="card-title mb-0 fw-semibold">{{ snippet.title }}</h6>
+        <!-- Only http(s) is linked: a javascript: URL would run when clicked. -->
         <a
-          v-if="snippet.source_url"
+          v-if="isHttpUrl(snippet.source_url)"
           :href="snippet.source_url"
           target="_blank"
+          rel="noopener noreferrer"
           class="text-muted d-block text-truncate"
           style="font-size: 11px"
         >
           {{ snippet.source_url }}
         </a>
+        <span
+          v-else-if="snippet.source_url"
+          class="text-muted d-block text-truncate"
+          style="font-size: 11px"
+        >
+          {{ snippet.source_url }}
+        </span>
       </div>
       <div class="d-flex gap-1 flex-shrink-0">
         <button

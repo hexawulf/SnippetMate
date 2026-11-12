@@ -1,87 +1,125 @@
 'use strict';
 const express = require('express');
 const db = require('../db.js');
+const { ValidationError, parseSnippet, parseId, searchTerms } = require('../lib/validate.js');
 const router = express.Router();
 
+const MAX_IMPORT = 1000;
+
+/** Collapse the snippet × tag join rows into one object per snippet. */
+function groupRows(rows, toSnippet) {
+  const byId = new Map();
+  for (const row of rows) {
+    if (!byId.has(row.id)) byId.set(row.id, { ...toSnippet(row), tags: [] });
+    if (row.tag) byId.get(row.id).tags.push(row.tag);
+  }
+  return [...byId.values()];
+}
+
+/**
+ * Link a snippet to its tags, creating tags that do not exist yet.
+ * `tags` is already de-duplicated by parseSnippet; INSERT IGNORE additionally
+ * covers names the database collation treats as equal (accents, width).
+ */
+async function attachTags(conn, snippetId, tags) {
+  for (const name of tags) {
+    const [tagResult] = await conn.query(
+      'INSERT INTO tags (name) VALUES (?) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)',
+      [name]
+    );
+    await conn.query(
+      'INSERT IGNORE INTO snippet_tags (snippet_id, tag_id) VALUES (?, ?)',
+      [snippetId, tagResult.insertId]
+    );
+  }
+}
+
+/** Run `work(conn)` in a transaction; roll back on any error. */
+async function inTransaction(work) {
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+    const result = await work(conn);
+    await conn.commit();
+    return result;
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
 
 router.get('/', async (req, res) => {
-  const q = req.query.q?.trim();
-  const tag = req.query.tag?.trim();
+  const q = typeof req.query.q === 'string' ? req.query.q : '';
+  const tag = typeof req.query.tag === 'string' ? req.query.tag.trim() : '';
 
   const conditions = ['s.user_id = ?'];
   const params = [req.userId];
+  const orderParams = [];
+  let order = 's.created_at DESC, s.id DESC';
 
-  if (q) {
-    conditions.push('MATCH(s.title, s.content) AGAINST(? IN NATURAL LANGUAGE MODE)');
-    params.push(q);
+  // Substring match on every word, so "snip" finds "snippet" and two-letter
+  // words such as "js" or "go" work. (The FULLTEXT index ignores words under
+  // three characters and has no prefix match in natural-language mode.)
+  const terms = searchTerms(q);
+  for (const term of terms) {
+    conditions.push("(COALESCE(s.title, '') LIKE ? OR s.content LIKE ?)");
+    params.push(`%${term}%`, `%${term}%`);
   }
+  if (terms.length > 0) {
+    // Title matches first, then newest.
+    order = "(COALESCE(s.title, '') LIKE ?) DESC, " + order;
+    orderParams.push(`%${terms[0]}%`);
+  }
+
   if (tag) {
     conditions.push('s.id IN (SELECT st2.snippet_id FROM snippet_tags st2 JOIN tags t2 ON st2.tag_id = t2.id WHERE t2.name = ?)');
     params.push(tag);
   }
-  const where = 'WHERE ' + conditions.join(' AND ');
 
   const [rows] = await db.query(
     `SELECT s.*, t.name AS tag
      FROM snippets s
      LEFT JOIN snippet_tags st ON s.id = st.snippet_id
      LEFT JOIN tags t ON st.tag_id = t.id
-     ${where}
-     ORDER BY s.created_at DESC`,
-    params
+     WHERE ${conditions.join(' AND ')}
+     ORDER BY ${order}`,
+    [...params, ...orderParams]
   );
 
-  const snippetMap = {};
-  for (const row of rows) {
-    if (!snippetMap[row.id]) {
-      snippetMap[row.id] = {
-        id: row.id,
-        title: row.title,
-        content: row.content,
-        source_url: row.source_url,
-        created_at: row.created_at,
-        updated_at: row.updated_at,
-        tags: []
-      };
-    }
-    if (row.tag) snippetMap[row.id].tags.push(row.tag);
-  }
-
-  res.json(Object.values(snippetMap));
+  res.json(groupRows(rows, (row) => ({
+    id: row.id,
+    title: row.title,
+    content: row.content,
+    source_url: row.source_url,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  })));
 });
 
-
 router.post('/', async (req, res) => {
-  const { title, content, source_url, tags = [] } = req.body;
+  const snippet = parseSnippet(req.body);
 
-  const [result] = await db.query(
-    'INSERT INTO snippets (title, content, source_url, user_id) VALUES (?, ?, ?, ?)',
-    [title, content, source_url, req.userId]
-  );
-  const snippetId = result.insertId;
-
-  for (const name of tags) {
-    const [tagResult] = await db.query(
-      'INSERT INTO tags (name) VALUES (?) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)',
-      [name]
+  // One transaction: a failure while tagging must not leave a snippet behind.
+  const id = await inTransaction(async (conn) => {
+    const [result] = await conn.query(
+      'INSERT INTO snippets (title, content, source_url, user_id) VALUES (?, ?, ?, ?)',
+      [snippet.title, snippet.content, snippet.source_url, req.userId]
     );
-    await db.query(
-      'INSERT INTO snippet_tags (snippet_id, tag_id) VALUES (?, ?)',
-      [snippetId, tagResult.insertId]
-    );
-  }
+    await attachTags(conn, result.insertId, snippet.tags);
+    return result.insertId;
+  });
 
-  res.status(201).json({ id: snippetId });
+  res.status(201).json({ id });
 });
 
 router.put('/:id', async (req, res) => {
-  const { id } = req.params;
-  const { title, content, source_url, tags = [] } = req.body;
+  const id = parseId(req.params.id);
+  if (id === null) return res.status(404).json({ error: 'Not found' });
+  const snippet = parseSnippet(req.body);
 
-  const conn = await db.getConnection();
-  try {
-    await conn.beginTransaction();
-
+  const found = await inTransaction(async (conn) => {
     // Confirm ownership before any writes. affectedRows is unreliable here:
     // mysql2 returns 0 when the UPDATE matches the row but changes no values,
     // which would give a legitimate owner a false 404 on a no-op save.
@@ -89,14 +127,11 @@ router.put('/:id', async (req, res) => {
       'SELECT id FROM snippets WHERE id = ? AND user_id = ?',
       [id, req.userId]
     );
-    if (!owned) {
-      await conn.rollback();
-      return res.status(404).json({ error: 'Not found' });
-    }
+    if (!owned) return false;
 
     await conn.query(
       'UPDATE snippets SET title = ?, content = ?, source_url = ? WHERE id = ? AND user_id = ?',
-      [title, content, source_url, owned.id, req.userId]
+      [snippet.title, snippet.content, snippet.source_url, owned.id, req.userId]
     );
 
     // Scope the DELETE through the snippets join so this write self-enforces ownership.
@@ -106,30 +141,18 @@ router.put('/:id', async (req, res) => {
        WHERE st.snippet_id = ? AND s.user_id = ?`,
       [owned.id, req.userId]
     );
+    await attachTags(conn, owned.id, snippet.tags);
+    return true;
+  });
 
-    for (const name of tags) {
-      const [tagResult] = await conn.query(
-        'INSERT INTO tags (name) VALUES (?) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)',
-        [name]
-      );
-      await conn.query(
-        'INSERT INTO snippet_tags (snippet_id, tag_id) VALUES (?, ?)',
-        [owned.id, tagResult.insertId]
-      );
-    }
-
-    await conn.commit();
-    res.json({ id: owned.id });
-  } catch (err) {
-    await conn.rollback();
-    throw err;
-  } finally {
-    conn.release();
-  }
+  if (!found) return res.status(404).json({ error: 'Not found' });
+  res.json({ id });
 });
 
 router.delete('/:id', async (req, res) => {
-  const [del] = await db.query('DELETE FROM snippets WHERE id = ? AND user_id = ?', [req.params.id, req.userId]);
+  const id = parseId(req.params.id);
+  if (id === null) return res.status(404).json({ error: 'Not found' });
+  const [del] = await db.query('DELETE FROM snippets WHERE id = ? AND user_id = ?', [id, req.userId]);
   if (del.affectedRows === 0) return res.status(404).json({ error: 'Not found' });
   res.status(204).end();
 });
@@ -141,29 +164,20 @@ router.get('/export', async (req, res) => {
      LEFT JOIN snippet_tags st ON s.id = st.snippet_id
      LEFT JOIN tags t ON st.tag_id = t.id
      WHERE s.user_id = ?
-     ORDER BY s.created_at DESC`,
+     ORDER BY s.created_at DESC, s.id DESC`,
     [req.userId]
   );
-
-  const snippetMap = {};
-  for (const row of rows) {
-    if (!snippetMap[row.id]) {
-      snippetMap[row.id] = {
-        title: row.title,
-        content: row.content,
-        source_url: row.source_url,
-        tags: [],
-        created_at: row.created_at
-      };
-    }
-    if (row.tag) snippetMap[row.id].tags.push(row.tag);
-  }
 
   const exportData = {
     format: 'snippetmate-export',
     version: 1,
     exported_at: new Date().toISOString(),
-    snippets: Object.values(snippetMap)
+    snippets: groupRows(rows, (row) => ({
+      title: row.title,
+      content: row.content,
+      source_url: row.source_url,
+      created_at: row.created_at,
+    })),
   };
 
   res.setHeader('Content-Disposition', 'attachment; filename="snippetmate-export.json"');
@@ -171,7 +185,7 @@ router.get('/export', async (req, res) => {
 });
 
 router.post('/import', async (req, res) => {
-  const { format, version, snippets } = req.body;
+  const { format, version, snippets } = req.body || {};
 
   if (format !== 'snippetmate-export' || version !== 1) {
     return res.status(400).json({ error: 'Invalid format or version' });
@@ -181,65 +195,48 @@ router.post('/import', async (req, res) => {
     return res.status(400).json({ error: 'Snippets must be an array' });
   }
 
-  if (snippets.length > 1000) {
-    return res.status(400).json({ error: 'Import capped at 1000 snippets' });
+  if (snippets.length > MAX_IMPORT) {
+    return res.status(400).json({ error: `Import capped at ${MAX_IMPORT} snippets` });
   }
 
   let imported = 0;
   let skipped = 0;
   const errors = [];
 
-  const conn = await db.getConnection();
-  try {
-    for (let i = 0; i < snippets.length; i++) {
-      const snippet = snippets[i];
-      const { title, content, source_url, tags = [] } = snippet;
+  for (let i = 0; i < snippets.length; i++) {
+    const row = snippets[i];
+    const rowTitle = row && typeof row === 'object' && typeof row.title === 'string' ? row.title : undefined;
 
-      if (!title || !content) {
-        errors.push({ index: i, title, error: 'Missing required fields: title and content' });
-        continue;
-      }
+    let snippet;
+    try {
+      snippet = parseSnippet(row, { requireTitle: true });
+    } catch (err) {
+      if (!(err instanceof ValidationError)) throw err;
+      errors.push({ index: i, title: rowTitle, error: err.message });
+      continue;
+    }
 
-      try {
-        await conn.beginTransaction();
-
+    try {
+      const created = await inTransaction(async (conn) => {
         const [[existing]] = await conn.query(
           'SELECT id FROM snippets WHERE user_id = ? AND content = ? AND source_url <=> ? LIMIT 1',
-          [req.userId, content, source_url || null]
+          [req.userId, snippet.content, snippet.source_url]
         );
-
-        if (existing) {
-          await conn.rollback();
-          skipped++;
-          continue;
-        }
+        if (existing) return false;
 
         const [result] = await conn.query(
           'INSERT INTO snippets (title, content, source_url, user_id) VALUES (?, ?, ?, ?)',
-          [title, content, source_url || null, req.userId]
+          [snippet.title, snippet.content, snippet.source_url, req.userId]
         );
-        const snippetId = result.insertId;
-
-        for (const name of tags) {
-          const [tagResult] = await conn.query(
-            'INSERT INTO tags (name) VALUES (?) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)',
-            [name]
-          );
-          await conn.query(
-            'INSERT INTO snippet_tags (snippet_id, tag_id) VALUES (?, ?)',
-            [snippetId, tagResult.insertId]
-          );
-        }
-
-        await conn.commit();
-        imported++;
-      } catch (err) {
-        await conn.rollback();
-        errors.push({ index: i, title, error: err.message });
-      }
+        await attachTags(conn, result.insertId, snippet.tags);
+        return true;
+      });
+      if (created) imported++;
+      else skipped++;
+    } catch (err) {
+      console.error('[import] row failed:', err?.code, err?.message);
+      errors.push({ index: i, title: rowTitle, error: 'Could not save this snippet' });
     }
-  } finally {
-    conn.release();
   }
 
   res.json({ imported, skipped, errors });

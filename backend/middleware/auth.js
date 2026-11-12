@@ -14,6 +14,25 @@ async function upsertUser(uid, email, name) {
   return result.insertId;
 }
 
+// uid -> { id, email, name, at }. Saves a database write on every request;
+// the row is refreshed when the profile changes or the entry is 10 minutes old.
+const USER_CACHE_TTL_MS = 10 * 60 * 1000;
+const USER_CACHE_MAX = 5000;
+const userCache = new Map();
+
+async function userIdFor(decoded, now = Date.now(), upsert = upsertUser) {
+  const email = decoded.email || null;
+  const name = decoded.name || null;
+  const hit = userCache.get(decoded.uid);
+  if (hit && hit.email === email && hit.name === name && now - hit.at < USER_CACHE_TTL_MS) {
+    return hit.id;
+  }
+  const id = await upsert(decoded.uid, email, name);
+  if (userCache.size >= USER_CACHE_MAX) userCache.clear();
+  userCache.set(decoded.uid, { id, email, name, at: now });
+  return id;
+}
+
 async function auth(req, res, next) {
   // Test-mode shim: activated by IS_TEST, which is frozen at process start.
   // Cannot be triggered by any request header or input.
@@ -33,15 +52,27 @@ async function auth(req, res, next) {
   }
   const token = authHeader.slice(7);
 
+  // Step 1: who is this? A bad or expired token is the only reason for 401.
+  let decoded;
   try {
     const admin = require('../firebase.js');
-    const decoded = await admin.auth().verifyIdToken(token);
-    req.userId = await upsertUser(decoded.uid, decoded.email, decoded.name);
-    next();
+    decoded = await admin.auth().verifyIdToken(token);
   } catch (err) {
-    console.error('[auth] verifyIdToken/upsert failed:', err?.code, err?.message, err?.stack);
-    res.status(401).json({ error: 'Unauthorized' });
+    console.error('[auth] verifyIdToken failed:', err?.code, err?.message);
+    return res.status(401).json({ error: 'Unauthorized' });
   }
+
+  // Step 2: find or create the user row. A database problem here is a server
+  // error: answering 401 would sign every user out during an outage.
+  try {
+    req.userId = await userIdFor(decoded);
+  } catch (err) {
+    console.error('[auth] user lookup failed:', err?.code, err?.message);
+    return res.status(503).json({ error: 'Service temporarily unavailable' });
+  }
+  next();
 }
 
 module.exports = auth;
+module.exports.userIdFor = userIdFor;
+module.exports.userCache = userCache;

@@ -8,6 +8,8 @@ import SnippetFormModal from './components/SnippetFormModal.vue'
 import api from './services/api.js'
 import { useAuth } from './composables/useAuth.js'
 import { snippetToMarkdown, downloadFile } from './utils/markdown.js'
+import { apiErrorMessage } from './utils/safety.js'
+import Swal from 'sweetalert2'
 
 const { user, authLoading, signIn, logout } = useAuth()
 
@@ -20,18 +22,32 @@ const activeTag = ref('')
 // Incremented on logout to discard any in-flight requests from the previous session.
 let loadEpoch = 0
 
+// Each list request gets a number; only the newest one may update the list.
+// Without it a slow response to an earlier search could overwrite the result
+// of a later one.
+let listRequest = 0
+
 async function loadSnippets() {
   if (!user.value) return
   const epoch = loadEpoch
-  const data = await api.getSnippets(searchQuery.value, activeTag.value)
-  if (epoch === loadEpoch) snippets.value = data
+  const request = ++listRequest
+  try {
+    const data = await api.getSnippets(searchQuery.value, activeTag.value)
+    if (epoch === loadEpoch && request === listRequest) snippets.value = data
+  } catch (err) {
+    console.error('Loading snippets failed:', err)
+  }
 }
 
 async function loadTags() {
   if (!user.value) return
   const epoch = loadEpoch
-  const data = await api.getTags()
-  if (epoch === loadEpoch) tags.value = data
+  try {
+    const data = await api.getTags()
+    if (epoch === loadEpoch) tags.value = data
+  } catch (err) {
+    console.error('Loading tags failed:', err)
+  }
 }
 
 function clearAll() {
@@ -47,17 +63,25 @@ function selectTag(name) {
   loadSnippets()
 }
 
+// Called by the form, which waits for it: a rejected promise keeps the form
+// open with the error shown. The refresh afterwards is not part of the save.
 async function handleSave(payload) {
   const { id, ...data } = payload
   if (id) await api.updateSnippet(id, data)
   else await api.createSnippet(data)
-  await loadSnippets()
-  await loadTags()
+  loadSnippets()
+  loadTags()
 }
 
 async function handleDelete(id) {
-  await api.deleteSnippet(id)
+  try {
+    await api.deleteSnippet(id)
+  } catch (err) {
+    Swal.fire('Not deleted', apiErrorMessage(err, 'Could not delete the snippet.'), 'error')
+    return
+  }
   await loadSnippets()
+  await loadTags()
 }
 
 function handleExportAll() {
@@ -72,6 +96,7 @@ async function handleExportJson() {
     downloadFile(JSON.stringify(data, null, 2), 'snippetmate-export.json')
   } catch (err) {
     console.error('Export JSON failed:', err)
+    Swal.fire('Export failed', apiErrorMessage(err, 'Could not export your snippets.'), 'error')
   }
 }
 
@@ -136,7 +161,7 @@ watch(searchQuery, () => {
         />
       </main>
     </div>
-    <SnippetFormModal ref="modalRef" @save="handleSave" />
+    <SnippetFormModal ref="modalRef" :save-snippet="handleSave" />
   </div>
 </template>
 

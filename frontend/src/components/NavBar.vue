@@ -3,6 +3,7 @@ import { ref, nextTick } from 'vue'
 import Swal from 'sweetalert2'
 import api from '../services/api.js'
 import AboutModal from './AboutModal.vue'
+import { apiErrorMessage } from '../utils/safety.js'
 
 defineProps({
   user: { type: Object, default: null },
@@ -28,10 +29,16 @@ async function handleFileSelect(event) {
   const file = event.target.files[0]
   if (!file) return
 
+  let parsed
   try {
-    const text = await file.text()
-    const parsed = JSON.parse(text)
-    
+    parsed = JSON.parse(await file.text())
+  } catch {
+    Swal.fire('Error', 'That file is not valid JSON.', 'error')
+    if (fileInputRef.value) fileInputRef.value.value = ''
+    return
+  }
+
+  try {
     const result = await api.importSnippets(parsed)
     let msg = `Imported ${result.imported}, skipped ${result.skipped}`
     if (result.errors && result.errors.length) {
@@ -46,7 +53,7 @@ async function handleFileSelect(event) {
     
     emit('imported')
   } catch (err) {
-    Swal.fire('Error', 'Invalid JSON file', 'error')
+    Swal.fire('Import failed', apiErrorMessage(err, 'The server could not import this file.'), 'error')
   } finally {
     if (fileInputRef.value) fileInputRef.value.value = ''
   }
