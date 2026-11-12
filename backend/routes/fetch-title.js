@@ -1,22 +1,21 @@
 const express = require('express');
 const router = express.Router();
+const { fetchTitle, BlockedUrlError } = require('../lib/safe-fetch.js');
 
-
-// Fetch the <title> of a URL on the server side - without sending the request to the external URL, so the browser doesn't hit CORS issues.
+// Fetch the <title> of a URL on the server side, so the browser doesn't hit CORS issues.
+// The URL comes from the user, so lib/safe-fetch.js only lets it reach public
+// http/https hosts (no loopback, LAN or other internal addresses).
 router.post('/', async (req, res) => {
-  const { url } = req.body;
+  const url = req.body?.url;
   if (!url) return res.status(400).json({ error: 'URL required' });
 
   try {
-    const response = await fetch(url, {
-       // Some sites block requests without a User-Agent, so we use a "normal-looking" browser User-Agent.
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SnippetMate/1.0)' }
-    });
-    const html = await response.text();
-    const match = html.match(/<title[^>]*>([^<]*)<\/title>/i);
-    const title = match ? match[1].replace(/&amp;/g, '&').trim() : '';
+    const title = await fetchTitle(url);
     res.json({ title });
-  } catch {
+  } catch (err) {
+    if (err instanceof BlockedUrlError) {
+      return res.status(400).json({ error: 'URL not allowed' });
+    }
     res.status(502).json({ error: 'Could not fetch URL' });
   }
 });
