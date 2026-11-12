@@ -2,8 +2,14 @@
 import { ref, onMounted } from 'vue'
 import { Modal } from 'bootstrap'
 import api from '../services/api.js'
+import { parseTagInput, apiErrorMessage } from '../utils/safety.js'
 
-const emit = defineEmits(['save'])
+// The parent passes the save function instead of listening for an event, so
+// the form can wait for the result: it closes only after a successful save
+// and keeps what was typed (with the error shown) when the save fails.
+const props = defineProps({
+  saveSnippet: { type: Function, required: true },
+})
 
 const modalEl = ref(null)
 let modal = null
@@ -11,6 +17,8 @@ const form = ref({ title: '', content: '', source_url: '', tags: '' })
 const editing = ref(false)
 const editId = ref(null)
 const fetching = ref(false)
+const saving = ref(false)
+const errorMessage = ref('')
 
 onMounted(() => { modal = new Modal(modalEl.value) })
 
@@ -30,6 +38,7 @@ function open(snippet) {
     editId.value = null
     form.value = { title: '', content: '', source_url: '', tags: '' }
   }
+  errorMessage.value = ''
   modal.show()
 }
 
@@ -37,18 +46,33 @@ function open(snippet) {
 async function fetchTitle() {
   if (!form.value.source_url) return
   fetching.value = true
+  errorMessage.value = ''
   try {
     const title = await api.fetchTitle(form.value.source_url)
     if (title) form.value.title = title
+  } catch (err) {
+    errorMessage.value = apiErrorMessage(err, 'Could not fetch the page title.')
   } finally {
     fetching.value = false
   }
 }
 
-function save() {
-  const tags = form.value.tags.split(',').map(t => t.trim()).filter(Boolean)
-  emit('save', { ...form.value, tags, id: editId.value })
-  modal.hide()
+async function save() {
+  if (saving.value) return
+  if (!form.value.content.trim()) {
+    errorMessage.value = 'The snippet is empty.'
+    return
+  }
+  saving.value = true
+  errorMessage.value = ''
+  try {
+    await props.saveSnippet({ ...form.value, tags: parseTagInput(form.value.tags), id: editId.value })
+    modal.hide()
+  } catch (err) {
+    errorMessage.value = apiErrorMessage(err, 'Could not save the snippet. Nothing was lost; please try again.')
+  } finally {
+    saving.value = false
+  }
 }
 
 // Expose open() so the parent can call modalRef.value.open(snippet), and then the modal will be shown.
@@ -103,10 +127,15 @@ defineExpose({ open })
             placeholder="Tags (comma-separated)"
             style="font-size: 13px;"
           />
+          <div v-if="errorMessage" class="alert alert-danger py-2 px-3 mt-2 mb-0" role="alert" style="font-size: 13px;">
+            {{ errorMessage }}
+          </div>
         </div>
         <div class="modal-footer">
           <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-          <button class="btn btn-primary btn-sm" @click="save">Save snippet</button>
+          <button class="btn btn-primary btn-sm" :disabled="saving" @click="save">
+            {{ saving ? 'Saving…' : 'Save snippet' }}
+          </button>
         </div>
       </div>
     </div>
