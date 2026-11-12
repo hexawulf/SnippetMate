@@ -207,7 +207,7 @@ cd backend
 npm test
 ```
 
-Tests run against the MySQL database configured in `.env` and clean up after themselves.
+The API tests write to and delete from the MySQL database configured in `.env`, so they refuse to run unless `DB_NAME` ends in `_test`. Point `.env` (or the environment) at a separate test database first; never run them against the production database. The `fetch-title` tests need no database: `NODE_ENV=test node --test test/fetch-title.test.js`.
 
 ## Deployment
 

@@ -4,6 +4,15 @@ const request = require('supertest');
 const app = require('../server.js');
 const db = require('../db.js');
 
+// These tests write to and delete from the configured database (the cleanup
+// below removes rows for every user). Refuse to run against anything that is
+// not clearly a test database.
+if (!/_test$/.test(process.env.DB_NAME || '')) {
+  throw new Error(
+    `Refusing to run API tests against database "${process.env.DB_NAME}": DB_NAME must end in "_test".`
+  );
+}
+
 // Distinct tag name. Cleanup at the end then only touches data this test file created.
 const TEST_TAG = 'test-tag-day16';
 
