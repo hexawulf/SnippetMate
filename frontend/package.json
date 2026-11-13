@@ -10,12 +10,13 @@
     "test": "node --test \"src/**/*.test.js\""
   },
   "dependencies": {
+    "@firebase/app": "0.16.2",
+    "@firebase/auth": "1.13.6",
     "@popperjs/core": "^2.11.8",
     "axios": "^1.15.2",
     "bootstrap": "^5.3.8",
     "bootstrap-icons": "^1.13.1",
     "bootswatch": "^5.3.8",
-    "firebase": "^12.15.0",
     "sweetalert2": "^11.26.24",
     "vue": "^3.5.32"
   },
