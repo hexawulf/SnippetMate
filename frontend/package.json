@@ -10,18 +10,18 @@
     "test": "node --test \"src/**/*.test.js\""
   },
   "dependencies": {
-    "@firebase/app": "0.16.2",
-    "@firebase/auth": "1.13.6",
+    "@firebase/app": "0.16.5",
+    "@firebase/auth": "1.13.9",
     "@popperjs/core": "^2.11.8",
     "axios": "^1.15.2",
     "bootstrap": "^5.3.8",
-    "bootstrap-icons": "^1.13.1",
+    "bootstrap-icons": "^1.13.2",
     "bootswatch": "^5.3.8",
-    "sweetalert2": "^11.26.24",
+    "sweetalert2": "^11.26.25",
     "vue": "^3.5.32"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^6.0.5",
+    "@vitejs/plugin-vue": "^6.0.10",
     "vite": "^8.0.4"
   }
 }
