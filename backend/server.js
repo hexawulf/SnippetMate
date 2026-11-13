@@ -1,13 +1,17 @@
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
 const auth = require('./middleware/auth.js');
 const { ValidationError } = require('./lib/validate.js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+// Loopback by default: nginx proxies to 127.0.0.1, so nothing else on the LAN
+// needs to reach the API directly. Set HOST=0.0.0.0 to expose it.
+const HOST = process.env.HOST || '127.0.0.1';
 
-app.use(cors());
+// No CORS middleware: the frontend calls /api on its own origin (nginx in
+// production, the Vite proxy in development), so cross-origin access is not needed.
+app.disable('x-powered-by');
 // An export of 1000 snippets is well over the 100 KB default; imports of
 // one's own export used to fail with 413.
 app.use(express.json({ limit: '5mb' }));
@@ -40,8 +44,8 @@ app.use((err, req, res, next) => {
 
 // Start the server only when run directly (node server.js) and not when imported by tests.
 if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`SnippetMate backend listening on http://localhost:${PORT}`);
+  app.listen(PORT, HOST, () => {
+    console.log(`SnippetMate backend listening on http://${HOST}:${PORT}`);
   });
 }
 

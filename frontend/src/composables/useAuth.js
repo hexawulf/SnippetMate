@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth'
+import { onAuthStateChanged, signInWithPopup, signOut } from '@firebase/auth'
 import { auth, googleProvider } from '../services/firebase.js'
 
 // Module-scope refs — shared across all callers without Pinia.
