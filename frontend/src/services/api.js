@@ -4,6 +4,11 @@ import { auth } from './firebase.js'
 const api = axios.create({ baseURL: '/api' })
 
 api.interceptors.request.use(async (config) => {
+  if (import.meta.env.MODE === 'e2e') {
+    const mode = new URLSearchParams(location.search).get('e2eAuth') || 'user1'
+    config.headers.set('Authorization', mode === 'user2' ? 'Bearer user2' : 'Bearer seed-demo')
+    return config
+  }
   const u = auth.currentUser
   if (u) config.headers.set('Authorization', `Bearer ${await u.getIdToken()}`)
   return config

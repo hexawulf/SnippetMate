@@ -6,10 +6,25 @@ import { auth, googleProvider } from '../services/firebase.js'
 const user = ref(null)
 const authLoading = ref(true)
 
-onAuthStateChanged(auth, (u) => {
-  user.value = u
-  authLoading.value = false
-})
+if (import.meta.env.MODE === 'e2e') {
+  const mode = new URLSearchParams(location.search).get('e2eAuth') || 'user1'
+  if (mode === 'signed-out') {
+    authLoading.value = false
+  } else if (mode !== 'loading') {
+    const second = mode === 'user2'
+    user.value = {
+      uid: second ? 'seed-demo-2' : 'seed-demo',
+      displayName: second ? 'Seed Demo 2' : 'Seed Demo',
+      email: second ? 'seed-demo-2@snippetmate.local' : 'demo@snippetmate.local',
+    }
+    authLoading.value = false
+  }
+} else {
+  onAuthStateChanged(auth, (u) => {
+    user.value = u
+    authLoading.value = false
+  })
+}
 
 export function useAuth() {
   async function signIn() {
