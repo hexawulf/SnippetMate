@@ -8,8 +8,22 @@ defineEmits(['select'])
 </script>
 
 <template>
-  <!-- The d-none d-md-block class will hide the sidebar on small screens (mobile/tablet portrait). -->
-  <aside class="bg-white border-end p-3 flex-shrink-0 d-none d-md-block"
+  <div v-if="tags.length" class="d-md-none bg-body-tertiary border-bottom px-3 py-2">
+    <div class="d-flex align-items-center gap-1 overflow-x-auto pb-1" aria-label="Filter by tag">
+      <span class="text-uppercase small text-muted fw-medium me-1 flex-shrink-0">Tags</span>
+      <button
+        v-for="tag in tags"
+        :key="tag"
+        type="button"
+        class="badge rounded-pill sm-tag flex-shrink-0"
+        :class="active === tag ? 'sm-tag-active' : ''"
+        :aria-pressed="active === tag"
+        @click="$emit('select', tag)"
+      >{{ tag }}</button>
+    </div>
+  </div>
+
+  <aside class="bg-body-tertiary border-end p-3 flex-shrink-0 d-none d-md-block"
          style="width: 240px; font-size: 13px;">
     <p class="text-uppercase small text-muted fw-medium mb-2">Filter by tag</p>
     <div class="d-flex flex-wrap gap-1 mb-3">
@@ -18,7 +32,7 @@ defineEmits(['select'])
         :key="tag"
         type="button"
         class="badge rounded-pill sm-tag"
-        :class="active === tag ? 'bg-primary text-white' : ''"
+        :class="active === tag ? 'sm-tag-active' : ''"
         :aria-pressed="active === tag"
         @click="$emit('select', tag)"
       >{{ tag }}</button>

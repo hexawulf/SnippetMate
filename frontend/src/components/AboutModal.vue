@@ -54,10 +54,11 @@ defineExpose({ open })
           <h6>Key Features</h6>
           <ul>
             <li>Capture text &amp; code snippets</li>
-            <li>Organize with tags</li>
-            <li>Full-text and tag-based search</li>
+            <li>Organize with tags and search across title &amp; content</li>
             <li>Server-side URL title fetching</li>
-            <li>Google sign-in</li>
+            <li>Markdown export and JSON backup import / export</li>
+            <li>Google sign-in with per-user isolation</li>
+            <li>Light and dark themes</li>
           </ul>
 
           <h6>Tech Stack</h6>

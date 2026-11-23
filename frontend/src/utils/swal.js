@@ -6,7 +6,8 @@ export function fireDialog(optionsOrTitle, text, icon) {
   const dark = document.documentElement.getAttribute('data-bs-theme') === 'dark'
   const base = {
     confirmButtonColor: ACCENT_COLOR,
-    theme: dark ? 'bootstrap-5-dark' : 'bootstrap-5-light',
+    theme: dark ? 'dark' : 'light',
+    ...(dark ? { background: '#1e293b', color: '#f8fafc', cancelButtonColor: '#475569' } : {}),
   }
   if (typeof optionsOrTitle === 'string') {
     return Swal.fire({ ...base, title: optionsOrTitle, text, icon })

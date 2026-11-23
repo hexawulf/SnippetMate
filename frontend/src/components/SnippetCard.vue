@@ -1,23 +1,13 @@
 <script setup>
 import { computed } from 'vue'
-import Swal from 'sweetalert2'
 import { snippetToMarkdown, generateFilename, downloadFile } from '../utils/markdown.js'
 import { isHttpUrl } from '../utils/safety.js'
+import { fireDialog } from '../utils/swal.js'
 
 const props = defineProps({
   snippet: { type: Object, required: true },
 })
 const emit = defineEmits(['edit', 'delete', 'select-tag'])
-
-const borders = [
-  'border-primary',
-  'border-secondary',
-  'border-success',
-  'border-danger',
-  'border-warning',
-  'border-info'
-]
-const borderClass = computed(() => borders[props.snippet.id % borders.length])
 
 const formattedDate = computed(() => {
   if (!props.snippet.created_at) return ''
@@ -26,7 +16,7 @@ const formattedDate = computed(() => {
 })
 
 async function confirmDelete() {
-  const result = await Swal.fire({
+  const result = await fireDialog({
     title: 'Delete snippet?',
     text: 'This cannot be undone.',
     icon: 'warning',
@@ -45,7 +35,7 @@ function downloadMd() {
 }
 </script>
 <template>
-  <div class="card mb-3" :class="borderClass" style="border-width: 2px">
+  <div class="card mb-3 shadow-sm">
     <div
       class="card-header d-flex justify-content-between align-items-start gap-2"
     >
