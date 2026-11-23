@@ -1,6 +1,6 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import { Modal } from 'bootstrap'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
+import Modal from 'bootstrap/js/dist/modal'
 import api from '../services/api.js'
 import { parseTagInput, apiErrorMessage } from '../utils/safety.js'
 
@@ -21,16 +21,16 @@ const saving = ref(false)
 const errorMessage = ref('')
 
 onMounted(() => { modal = new Modal(modalEl.value) })
+onBeforeUnmount(() => { modal?.dispose() })
 
 function open(snippet) {
   if (snippet) {
     editing.value = true
     editId.value = snippet.id
     form.value = {
-      title: snippet.title,
+      title: snippet.title || '',
       content: snippet.content,
       source_url: snippet.source_url || '',
-      // Tags are an array in the database, but a comma-separated string in the input field, so we join them here.
       tags: (snippet.tags || []).join(', ')
     }
   } else {
@@ -42,7 +42,6 @@ function open(snippet) {
   modal.show()
 }
 
-// Ask the backend to fetch the page title for the given URL. This will then be filled into the title field.
 async function fetchTitle() {
   if (!form.value.source_url) return
   fetching.value = true
@@ -75,65 +74,74 @@ async function save() {
   }
 }
 
-// Expose open() so the parent can call modalRef.value.open(snippet), and then the modal will be shown.
 defineExpose({ open })
 </script>
 
 <template>
-  <div ref="modalEl" class="modal fade" tabindex="-1">
+  <div ref="modalEl" class="modal fade" tabindex="-1" aria-labelledby="snippetModalTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">{{ editing ? 'Edit Snippet' : 'Add Snippet' }}</h5>
-          <button class="btn-close" data-bs-dismiss="modal"></button>
+          <h5 id="snippetModalTitle" class="modal-title">{{ editing ? 'Edit Snippet' : 'Add Snippet' }}</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
-          <input
-            v-model="form.title"
-            class="form-control mb-2"
-            placeholder="Title"
-            style="font-size: 13px;"
-          />
-          <textarea
-            v-model="form.content"
-            class="form-control font-monospace mb-2"
-            rows="4"
-            placeholder="Paste your snippet here..."
-            style="font-size: 13px; resize: vertical;"
-          ></textarea>
-          
-          <div class="input-group mb-2">
+          <div class="mb-2">
+            <label for="snippetTitle" class="form-label small mb-1">Title</label>
             <input
-              v-model="form.source_url"
-              type="url"
-              class="form-control"
-              placeholder="Source URL (optional)"
-              style="font-size: 13px;"
+              id="snippetTitle"
+              v-model="form.title"
+              class="form-control form-control-sm"
+              placeholder="Title (optional)"
             />
-            <button
-              class="btn btn-outline-secondary"
-              type="button"
-              :disabled="!form.source_url || fetching"
-              @click="fetchTitle"
-              style="font-size: 13px;"
-            >
-              {{ fetching ? 'Fetching…' : 'Fetch title' }}
-            </button>
           </div>
-
-          <input
-            v-model="form.tags"
-            class="form-control"
-            placeholder="Tags (comma-separated)"
-            style="font-size: 13px;"
-          />
-          <div v-if="errorMessage" class="alert alert-danger py-2 px-3 mt-2 mb-0" role="alert" style="font-size: 13px;">
+          <div class="mb-2">
+            <label for="snippetContent" class="form-label small mb-1">Snippet</label>
+            <textarea
+              id="snippetContent"
+              v-model="form.content"
+              class="form-control form-control-sm font-monospace"
+              rows="5"
+              placeholder="Paste your snippet here..."
+              style="resize: vertical;"
+            ></textarea>
+          </div>
+          <div class="mb-2">
+            <label for="snippetSourceUrl" class="form-label small mb-1">Source URL</label>
+            <div class="input-group input-group-sm">
+              <input
+                id="snippetSourceUrl"
+                v-model="form.source_url"
+                type="url"
+                class="form-control"
+                placeholder="https://example.com (optional)"
+              />
+              <button
+                class="btn btn-outline-secondary"
+                type="button"
+                :disabled="!form.source_url || fetching"
+                @click="fetchTitle"
+              >
+                {{ fetching ? 'Fetching…' : 'Fetch title' }}
+              </button>
+            </div>
+          </div>
+          <div>
+            <label for="snippetTags" class="form-label small mb-1">Tags</label>
+            <input
+              id="snippetTags"
+              v-model="form.tags"
+              class="form-control form-control-sm"
+              placeholder="Comma-separated, e.g. vue, security"
+            />
+          </div>
+          <div v-if="errorMessage" class="alert alert-danger py-2 px-3 mt-2 mb-0 small" role="alert">
             {{ errorMessage }}
           </div>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-          <button class="btn btn-primary btn-sm" :disabled="saving" @click="save">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary btn-sm" :disabled="saving" @click="save">
             {{ saving ? 'Saving…' : 'Save snippet' }}
           </button>
         </div>

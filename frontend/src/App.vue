@@ -18,6 +18,7 @@ const modalRef = ref(null)
 const snippets = ref([])
 const tags = ref([])
 const activeTag = ref('')
+const loadError = ref('')
 
 // Incremented on logout to discard any in-flight requests from the previous session.
 let loadEpoch = 0
@@ -33,9 +34,15 @@ async function loadSnippets() {
   const request = ++listRequest
   try {
     const data = await api.getSnippets(searchQuery.value, activeTag.value)
-    if (epoch === loadEpoch && request === listRequest) snippets.value = data
+    if (epoch === loadEpoch && request === listRequest) {
+      snippets.value = data
+      loadError.value = ''
+    }
   } catch (err) {
     console.error('Loading snippets failed:', err)
+    if (epoch === loadEpoch && request === listRequest) {
+      loadError.value = apiErrorMessage(err, 'Could not load your snippets.')
+    }
   }
 }
 
@@ -51,11 +58,18 @@ async function loadTags() {
 }
 
 function clearAll() {
+  clearTimeout(timer)
   loadEpoch++
   snippets.value = []
   tags.value = []
   searchQuery.value = ''
   activeTag.value = ''
+  loadError.value = ''
+}
+
+function retryLoad() {
+  loadSnippets()
+  loadTags()
 }
 
 function selectTag(name) {
@@ -93,7 +107,7 @@ function handleExportAll() {
 async function handleExportJson() {
   try {
     const data = await api.exportSnippetsJson()
-    downloadFile(JSON.stringify(data, null, 2), 'snippetmate-export.json')
+    downloadFile(JSON.stringify(data, null, 2), 'snippetmate-export.json', 'application/json')
   } catch (err) {
     console.error('Export JSON failed:', err)
     Swal.fire('Export failed', apiErrorMessage(err, 'Could not export your snippets.'), 'error')
@@ -154,10 +168,16 @@ watch(searchQuery, () => {
         @select="selectTag"
       />
       <main class="flex-grow-1 bg-body p-3" style="min-height: 90vh; min-width: 0;">
+        <div v-if="loadError" class="alert alert-danger d-flex align-items-center justify-content-between gap-2 mb-3" role="alert">
+          <span>{{ loadError }}</span>
+          <button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" @click="retryLoad">Retry</button>
+        </div>
         <SnippetList
           :snippets="snippets"
+          :filtered="Boolean(searchQuery.trim() || activeTag)"
           @edit="modalRef.open($event)"
           @delete="handleDelete"
+          @select-tag="selectTag"
         />
       </main>
     </div>
@@ -179,6 +199,13 @@ watch(searchQuery, () => {
   border: none;
 }
 .sm-tag:hover { background: #e8cfc3; color: #7a2e10; }
+
+.sm-snippet-body {
+  white-space: pre-wrap;
+  overflow-wrap: normal;
+  overflow-x: auto;
+  font-family: inherit;
+}
 
 .sm-loading-screen,
 .sm-signin-screen {

@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
-import { Modal } from 'bootstrap'
+import Modal from 'bootstrap/js/dist/modal'
 import pkg from '../../package.json'
 
 const emit = defineEmits(['closed'])
@@ -19,6 +19,7 @@ onBeforeUnmount(() => {
   if (modalEl.value) {
     modalEl.value.removeEventListener('hidden.bs.modal', onHidden)
   }
+  modal?.dispose()
 })
 
 function onHidden() {

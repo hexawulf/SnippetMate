@@ -40,8 +40,8 @@ export function generateFilename(snippet) {
   return `snippet-${snippet.id}.md`
 }
 
-export function downloadFile(content, filename) {
-  const blob = new Blob([content], { type: 'text/markdown' })
+export function downloadFile(content, filename, mimeType = 'text/markdown') {
+  const blob = new Blob([content], { type: mimeType })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url

@@ -1,12 +1,15 @@
 <script setup>
 import SnippetCard from './SnippetCard.vue'
-defineProps(['snippets'])
-const emit = defineEmits(['edit', 'delete'])
+
+defineProps({
+  snippets: { type: Array, required: true },
+  filtered: { type: Boolean, default: false },
+})
+const emit = defineEmits(['edit', 'delete', 'select-tag'])
 </script>
 
 <template>
   <div class="row gx-3">
-    <!-- The col-12 col-lg-6 class will make the snippets stack on small screens (mobile/tablet portrait). -->
     <div
       v-for="snippet in snippets"
       :key="snippet.id"
@@ -16,8 +19,11 @@ const emit = defineEmits(['edit', 'delete'])
         :snippet="snippet"
         @edit="emit('edit', $event)"
         @delete="emit('delete', $event)"
+        @select-tag="emit('select-tag', $event)"
       />
     </div>
-    <p v-if="!snippets.length" class="text-muted text-center mt-4">No snippets yet.</p>
+    <p v-if="!snippets.length" class="text-muted text-center mt-4">
+      {{ filtered ? 'No snippets match your search or tag filter.' : 'No snippets yet.' }}
+    </p>
   </div>
 </template>

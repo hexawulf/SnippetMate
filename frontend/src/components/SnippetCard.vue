@@ -1,10 +1,13 @@
 <script setup>
+import { computed } from 'vue'
 import Swal from 'sweetalert2'
 import { snippetToMarkdown, generateFilename, downloadFile } from '../utils/markdown.js'
 import { isHttpUrl } from '../utils/safety.js'
 
-const props = defineProps(['snippet'])
-const emit = defineEmits(['edit', 'delete'])
+const props = defineProps({
+  snippet: { type: Object, required: true },
+})
+const emit = defineEmits(['edit', 'delete', 'select-tag'])
 
 const borders = [
   'border-primary',
@@ -14,8 +17,13 @@ const borders = [
   'border-warning',
   'border-info'
 ]
-// Pick a border colour based on the snippet id. The same id always gets the same colour, but different ids get different colours so snippets look varied.
-const borderClass = borders[props.snippet.id % borders.length]
+const borderClass = computed(() => borders[props.snippet.id % borders.length])
+
+const formattedDate = computed(() => {
+  if (!props.snippet.created_at) return ''
+  const d = new Date(props.snippet.created_at)
+  return Number.isNaN(d.getTime()) ? props.snippet.created_at : d.toISOString().slice(0, 16).replace('T', ' ')
+})
 
 async function confirmDelete() {
   const result = await Swal.fire({
@@ -42,7 +50,7 @@ function downloadMd() {
       class="card-header d-flex justify-content-between align-items-start gap-2"
     >
       <div class="overflow-hidden">
-        <h6 class="card-title mb-0 fw-semibold">{{ snippet.title }}</h6>
+        <h6 class="card-title mb-0 fw-semibold">{{ snippet.title || 'Untitled snippet' }}</h6>
         <!-- Only http(s) is linked: a javascript: URL would run when clicked. -->
         <a
           v-if="isHttpUrl(snippet.source_url)"
@@ -64,34 +72,35 @@ function downloadMd() {
       </div>
       <div class="d-flex gap-1 flex-shrink-0">
         <button
+          type="button"
           class="btn btn-sm btn-outline-primary"
           @click="downloadMd"
         >
           MD
         </button>
         <button
+          type="button"
           class="btn btn-sm btn-outline-secondary"
           @click="emit('edit', snippet)"
         >
           Edit
         </button>
-        <button class="btn btn-sm btn-outline-danger" @click="confirmDelete">Delete</button>
+        <button type="button" class="btn btn-sm btn-outline-danger" @click="confirmDelete">Delete</button>
       </div>
     </div>
     <div class="card-body">
-      <p class="card-text small mb-2" style="white-space: pre-wrap">
-        {{ snippet.content }}
-      </p>
-      <div class="d-flex flex-wrap gap-1 mb-2">
-        <span
+      <pre class="card-text sm-snippet-body small mb-2" tabindex="0">{{ snippet.content }}</pre>
+      <div v-if="snippet.tags?.length" class="d-flex flex-wrap gap-1 mb-2">
+        <button
           v-for="tag in snippet.tags"
           :key="tag"
+          type="button"
           class="badge rounded-pill sm-tag"
-          >{{ tag }}</span
-        >
+          @click="emit('select-tag', tag)"
+        >{{ tag }}</button>
       </div>
       <p class="text-muted mb-0" style="font-size: 11px">
-        {{ snippet.created_at }}
+        {{ formattedDate }}
       </p>
     </div>
   </div>
