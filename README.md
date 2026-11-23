@@ -12,9 +12,9 @@ Your "SnippetMate" lives in your browser while you're reading the news, browsing
 
 ## Tech Stack
 
-- **Frontend:** Vue 3 + Vite + Bootstrap 5 (with the Bootswatch "United" theme) + SweetAlert2 (pop-ups) + Firebase Web SDK (Google sign-in)
+- **Frontend:** Vue 3 + Vite + Bootstrap 5.3 (custom teal light/dark theme) + SweetAlert2 (pop-ups) + Firebase Web SDK (Google sign-in)
 - **Backend:** Node.js + Express, with `firebase-admin` verifying a Google ID token on every data request
-- **Database:** MySQL 8 (FULLTEXT index on title and content, a many-to-many snippet–tag schema, and per-user ownership)
+- **Database:** MySQL 8 (many-to-many snippet–tag schema and per-user ownership)
 
 No external **data** APIs are used. Firebase is used only for authentication (Google sign-in).
 
@@ -24,7 +24,7 @@ No external **data** APIs are used. Firebase is used only for authentication (Go
 
 These are the two required dynamic aspects (front-end JavaScript talking to the back-end):
 
-1. **CRUD with search and tag filtering** — Create, Read, Update and Delete snippets, with full-text search across the title and content, plus a tag-based sidebar filter.
+1. **CRUD with search and tag filtering** — Create, Read, Update and Delete snippets, with keyword search across title and content, plus a tag-based sidebar filter (and horizontal tag bar on mobile).
 2. **Server-side URL title fetching** — You paste a source URL, then (optionally) click *Fetch title*, and the back-end retrieves the page title and fills it into the form.
 
 ### Additional features
@@ -32,6 +32,7 @@ These are the two required dynamic aspects (front-end JavaScript talking to the 
 - **Google sign-in & multi-user isolation** — Firebase Authentication; every snippet and tag query is scoped to the signed-in user.
 - **Markdown export** — export a single snippet or the whole collection as Markdown.
 - **JSON import / export** *(new in v2.1.0)* — a canonical JSON round-trip for backup and restore, with duplicate-skipping and tag reconciliation on import.
+- **Teal light & dark mode** — follows `prefers-color-scheme` by default with a navbar theme toggle persisted in `localStorage`.
 
 ## Import / Export JSON format
 
@@ -65,10 +66,11 @@ Rules the importer enforces:
 ```
 SnippetMate/
 ├── backend/            Node.js + Express API
+│   ├── lib/            safe-fetch.js (SSRF guard), validate.js (input checks)
+│   ├── middleware/     auth.js — verifies the Firebase ID token, scopes by user
 │   ├── routes/         /api/health, /api/snippets (incl. /import + /export),
 │   │                   /api/tags, /api/fetch-title
-│   ├── middleware/     auth.js — verifies the Firebase ID token, scopes by user
-│   ├── test/           Integration tests using node:test + supertest
+│   ├── test/           Integration and unit tests (node:test + supertest)
 │   ├── db.js           MySQL connection pool (mysql2/promise)
 │   ├── firebase.js     Firebase Admin SDK init (loads the service-account key)
 │   ├── server.js       Express entry point
@@ -78,10 +80,12 @@ SnippetMate/
 │   └── seed.sql        Optional sample data, owned by a demo user
 └── frontend/           Vue 3 + Vite single-page app
     └── src/
-        ├── components/   NavBar, SearchBar, TagSidebar, SnippetList,
-        │                 SnippetCard, SnippetFormModal
-        ├── services/     api.js (axios wrapper; attaches the auth token)
-        ├── firebase.js   Firebase Web SDK init (reads VITE_FIREBASE_* env vars)
+        ├── assets/       theme.css (teal light/dark Bootstrap 5 tokens)
+        ├── components/   NavBar, AboutModal, SearchBar, TagSidebar,
+        │                 SnippetList, SnippetCard, SnippetFormModal
+        ├── composables/  useAuth.js (Firebase Auth state)
+        ├── services/     api.js (axios wrapper), firebase.js (Web SDK init)
+        ├── utils/        markdown.js, safety.js, swal.js, theme.js (+ tests)
         ├── App.vue
         └── main.js
 ```
@@ -207,11 +211,18 @@ cd backend
 npm test
 ```
 
+Frontend unit tests (`src/utils/*.test.js`) run with Node's built-in test runner:
+
+```bash
+cd frontend
+npm test
+```
+
 The API tests write to and delete from the MySQL database configured in `.env`, so they refuse to run unless `DB_NAME` ends in `_test`. Point `.env` (or the environment) at a separate test database first; never run them against the production database. The `fetch-title` tests need no database: `NODE_ENV=test node --test test/fetch-title.test.js`.
 
 ## Deployment
 
-The live instance runs at **[snippetmate.com](https://snippetmate.com)** on a Linux host: the built Vue SPA is served by nginx, the Express backend runs as a managed process behind an nginx reverse proxy, and MySQL runs locally. Cloudflare fronts TLS and DNS. Remember to add your production domain to **Firebase → Authentication → Settings → Authorized domains**, or Google sign-in is rejected with `auth/unauthorized-domain`.
+The live instance runs at **[www.snippetmate.com](https://www.snippetmate.com)** on a Linux host: the built Vue SPA is served by nginx, the Express backend runs as a managed process behind an nginx reverse proxy, and MySQL runs locally. Cloudflare fronts TLS and DNS. Remember to add your production domain to **Firebase → Authentication → Settings → Authorized domains**, or Google sign-in is rejected with `auth/unauthorized-domain`.
 
 ## Course Information
 

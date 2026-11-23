@@ -16,7 +16,7 @@ Repo: github.com/hexawulf/SnippetMate
 
 ## Stack
 
-- Frontend: Vue 3 + Vite + Bootstrap 5 (Bootswatch "United") + SweetAlert2 + Firebase web SDK. ES modules.
+- Frontend: Vue 3 + Vite + Bootstrap 5.3 (plain CSS + teal light/dark colourway in `src/assets/theme.css`, replacing Bootswatch "United") + bootstrap-icons + SweetAlert2 + Firebase web SDK. ES modules.
 - Backend: Node.js + Express, CommonJS (`require`). Entry backend/server.js, routes in backend/routes/.
 - DB: MySQL 8 via a mysql2 promise pool (backend/db.js), config from process.env. No external data APIs.
 
@@ -31,7 +31,9 @@ Frontend:
 - `defineProps` in object form with type + required; array/object defaults use factory functions.
 - API calls go through services/api.js (one shared axios instance whose interceptor attaches the
   Firebase ID token), imported in components, not main.js.
-- Custom CSS classes use an `sm-` prefix; shared design-system styles live unscoped in App.vue.
+- Custom CSS classes use an `sm-` prefix; theme tokens (`[data-bs-theme=light|dark]`) live in `frontend/src/assets/theme.css`, and shared layout styles live unscoped in `App.vue`. Theme state follows `prefers-color-scheme` with a `NavBar` toggle (`frontend/src/utils/theme.js`) and an anti-flash inline script in `frontend/index.html`.
+- SweetAlert2 dialogs go through `frontend/src/utils/swal.js` so the teal accent and dark mode stay consistent.
+- Bootstrap JS is imported per component (`bootstrap/js/dist/modal`), not via the full bundle.
 
 Backend:
 - CommonJS throughout. One route file per resource under backend/routes/
@@ -90,12 +92,13 @@ Backend:
 
 ## How to run & verify
 
-- Backend: cd backend && npm install && npm start  -> http://localhost:3000
-- Frontend: cd frontend && npm install && npm run dev  -> http://localhost:5173
+- Backend: cd backend && npm install && npm start (or `npm run dev` with `node --watch`) -> http://127.0.0.1:3000
+- Frontend: cd frontend && npm install && npm run dev -> http://localhost:5173
   (requires frontend/.env.local with VITE_FIREBASE_* for sign-in to work).
-- Tests: cd backend && npm test  (node:test + supertest; integration tests hit the real DB and
-  cover CRUD, search/tag filter, JSON import/export, the 401 auth boundary, and a second-user
+- Backend tests: cd backend && npm test (node:test + supertest; integration tests hit the real DB and
+  cover CRUD, search/tag filter, JSON import/export, SSRF guard, the 401 auth boundary, and a second-user
   round-trip).
+- Frontend tests: cd frontend && npm test (node:test unit tests for `src/utils/*.test.js`).
 - Load DB: mysql -u <DB_USER> -p snippetmate < db/schema.sql  then  < db/seed.sql
 
 ## Non-negotiables
