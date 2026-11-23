@@ -73,14 +73,14 @@ after(() => {
 test('blocks loopback, private, link-local, CGNAT and reserved IPv4', () => {
   for (const ip of [
     '127.0.0.1', '127.9.9.9', '10.0.0.5', '172.16.0.1', '172.31.255.255',
-    '192.168.50.102', '169.254.169.254', '100.64.0.1', '0.0.0.0', '224.0.0.1', '255.255.255.255',
+    '192.168.1.10', '169.254.169.254', '100.64.0.1', '0.0.0.0', '224.0.0.1', '255.255.255.255',
   ]) {
     assert.strictEqual(isBlockedAddress(ip), true, ip);
   }
 });
 
 test('blocks IPv6 loopback, unique-local, link-local and IPv4-mapped private', () => {
-  for (const ip of ['::1', '::', 'fc00::1', 'fd12:3456::1', 'fe80::1', '::ffff:127.0.0.1', '::ffff:192.168.50.1', '64:ff9b::7f00:1']) {
+  for (const ip of ['::1', '::', 'fc00::1', 'fd12:3456::1', 'fe80::1', '::ffff:127.0.0.1', '::ffff:192.168.1.1', '64:ff9b::7f00:1']) {
     assert.strictEqual(isBlockedAddress(ip), true, ip);
   }
 });
@@ -96,7 +96,7 @@ test('parseAllowedUrl rejects other schemes, credentials, ports and internal lit
   for (const bad of [
     'file:///etc/passwd', 'ftp://example.com/', 'gopher://example.com/', 'javascript:alert(1)',
     'http://user:pw@example.com/', 'http://example.com:8080/', 'https://example.com:22/',
-    'http://127.0.0.1/', 'http://[::1]/', 'http://192.168.50.120/', 'http://169.254.169.254/latest/meta-data/',
+    'http://127.0.0.1/', 'http://[::1]/', 'http://192.168.1.20/', 'http://169.254.169.254/latest/meta-data/',
     'http://2130706433/', 'http://0x7f.1/', 'http://0177.0.0.1/', 'not a url', '', 42, null,
     'http://example.com/' + 'a'.repeat(2100),
   ]) {
@@ -159,7 +159,7 @@ test('route answers 400 for internal targets and missing url', async () => {
   app.use(express.json());
   app.use('/api/fetch-title', require('../routes/fetch-title.js'));
 
-  for (const url of ['http://127.0.0.1:5010/api/health', 'http://192.168.50.120:5040/', 'http://localhost/', 'file:///etc/passwd']) {
+  for (const url of ['http://127.0.0.1:8080/api/health', 'http://10.0.0.5:8080/', 'http://localhost/', 'file:///etc/passwd']) {
     const res = await request(app).post('/api/fetch-title').send({ url });
     assert.strictEqual(res.status, 400, url);
     assert.deepStrictEqual(res.body, { error: 'URL not allowed' });
