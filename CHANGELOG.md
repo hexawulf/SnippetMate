@@ -4,6 +4,11 @@ All notable changes to SnippetMate are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- `/robots.txt` and `/sitemap.xml` are static files in the frontend build (the sitemap was the SPA HTML fallback). `robots.txt` allows crawling and points at `https://www.snippetmate.com/sitemap.xml`. The homepage sets a canonical URL and a meta description.
+
 ## [2.2.1] - 2026-11-24
 
 ### Changed
