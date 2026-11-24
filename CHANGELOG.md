@@ -4,6 +4,11 @@ All notable changes to SnippetMate are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.1] - 2026-11-24
+
+### Changed
+- About dialog: the contact list is now a **Developer** line, "Erling Wulf Weinreich (0xWulf) · dev@0xwulf.dev", and a **GitHub Repo** link, matching the About dialogs of the other 0xWulf apps.
+
 ## [2.2.0] - 2026-11-24
 
 ### Added

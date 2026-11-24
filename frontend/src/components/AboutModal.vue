@@ -64,12 +64,16 @@ defineExpose({ open })
           <h6>Tech Stack</h6>
           <p>Vue 3 · Vite · Bootstrap 5 · Express · MySQL 8 · Firebase Auth</p>
 
-          <h6>Contact</h6>
-          <ul class="list-unstyled mb-0">
-            <li>AUTHOR: 0xWulf</li>
-            <li>EMAIL: <a href="mailto:dev@0xwulf.dev">dev@0xwulf.dev</a></li>
-            <li>GITHUB: <a href="https://github.com/hexawulf/SnippetMate" target="_blank" rel="noopener noreferrer">GitHub Repository</a></li>
-          </ul>
+          <h6>Developer</h6>
+          <p>
+            Erling Wulf Weinreich (0xWulf) ·
+            <a href="mailto:dev@0xwulf.dev">dev@0xwulf.dev</a>
+          </p>
+
+          <h6>GitHub Repo</h6>
+          <p class="mb-0">
+            <a href="https://github.com/hexawulf/SnippetMate" target="_blank" rel="noopener noreferrer">github.com/hexawulf/SnippetMate</a>
+          </p>
         </div>
         <div class="modal-footer">
           <button class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Close</button>
