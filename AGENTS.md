@@ -3,7 +3,9 @@
 SnippetMate is a single-page snippet manager (capture, tag, and search short text/code
 snippets). Version 2 shipped: multi-user with Google sign-in via Firebase and full per-user
 data isolation, plus Markdown export, on top of the original single-user app. v2.1.0 added
-JSON import/export (a canonical round-trip format for backup and restore).
+JSON import/export (a canonical round-trip format for backup and restore). v2.2.0 refreshed
+the UI to a teal light/dark colourway (replacing Bootswatch "United") and cleaned up audit
+findings.
 
 Repo: github.com/hexawulf/SnippetMate
 

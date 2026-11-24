@@ -32,7 +32,7 @@ These are the two required dynamic aspects (front-end JavaScript talking to the 
 - **Google sign-in & multi-user isolation** — Firebase Authentication; every snippet and tag query is scoped to the signed-in user.
 - **Markdown export** — export a single snippet or the whole collection as Markdown.
 - **JSON import / export** *(new in v2.1.0)* — a canonical JSON round-trip for backup and restore, with duplicate-skipping and tag reconciliation on import.
-- **Teal light & dark mode** — follows `prefers-color-scheme` by default with a navbar theme toggle persisted in `localStorage`.
+- **Teal light & dark mode** *(new in v2.2.0)* — follows `prefers-color-scheme` by default with a navbar theme toggle persisted in `localStorage`.
 
 ## Import / Export JSON format
 
